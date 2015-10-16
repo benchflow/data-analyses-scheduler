@@ -1,0 +1,7 @@
+{
+"settings": [
+	{"topic" : "test1", "scripts" : ["boop.py", "bap.py"]},
+	{"topic" : "test2", "scripts" : ["beep.py", "glop.py"]},
+	{"topic" : "test3", "scripts" : ["kaboom.py", "nothing.py"]}
+	]
+}

@@ -1,0 +1,7 @@
+.godeps/
+pkg/
+bin/
+vendor/
+github.com/
+.settings/
+.project
