@@ -7,6 +7,11 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+var c Configuration
+var kafkaIp string
+var kafkaPort string
+var sparkSubmitOptions string
+
 type Configuration struct {
 	Settings []struct {
 		Topic string `json:"topic"`
@@ -17,7 +22,7 @@ type Configuration struct {
 func consumeFromTopic(name string) {
 	go func() {
 		config := sarama.NewConfig()
-		consumer, err := sarama.NewConsumer([]string{"192.168.99.100:9092"}, config)
+		consumer, err := sarama.NewConsumer([]string{kafkaIp+":"+kafkaPort}, config)
 		if err != nil {
 			panic(err)
 			}
@@ -30,6 +35,13 @@ func consumeFromTopic(name string) {
 		for true {
 			m := <- mc 
 			fmt.Println(name+" received: "+string(m.Value))
+			for _, t := range c.Settings {
+				if t.Topic == name {
+					for _, s := range t.Scripts {
+						fmt.Println(name+" topic, submitting script "+string(s))
+						}
+					}
+				} 
 			// TODO: Sending the task to Spark
 			}
 		}()
@@ -37,11 +49,14 @@ func consumeFromTopic(name string) {
 
 func main() {
 	
+	kafkaIp = "192.168.99.100"
+	kafkaPort = "9092"
+	sparkSubmitOptions = ""
+	
 	dat, err := ioutil.ReadFile("config.json")
     if err != nil {
 			panic(err)
 			}
-	var c Configuration
 	err = json.Unmarshal(dat, &c)
 	if err != nil {
 			panic(err)
