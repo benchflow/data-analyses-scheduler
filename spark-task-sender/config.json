@@ -1,7 +1,8 @@
 {
-"settings": [
-	{"topic" : "test1", "scripts" : ["boop.py", "bap.py"]},
-	{"topic" : "test2", "scripts" : ["beep.py", "glop.py"]},
-	{"topic" : "test3", "scripts" : ["kaboom.py", "nothing.py"]}
+"settings":[
+		{"topic":"test1", "scripts":[
+			{"script":"boop.py", "dependencies":["something"]}, 
+			{"script":"baap.py", "dependencies":["stuff"]}
+		]}
 	]
 }

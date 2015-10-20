@@ -5,18 +5,39 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"github.com/Shopify/sarama"
+	"os/exec"
+	"strings"
 )
 
 var c Configuration
 var kafkaIp string
 var kafkaPort string
-var sparkSubmitOptions string
+var sparkMaster string
 
 type Configuration struct {
 	Settings []struct {
 		Topic string `json:"topic"`
-		Scripts []string `json:"scripts"`
+		Scripts []struct {
+			Script string `json:"script"`
+			Dependencies []string `json:"dependencies"`
+			} `json:"scripts"`
 		} `json:settings`
+	}
+
+type SparkSubmit struct {
+	Master string
+	Dependencies []string
+	Script string
+	}
+
+func constructSubmitCommand(ss SparkSubmit) exec.Cmd {
+	depString := ""
+	for _, d := range ss.Dependencies {
+		depString = depString + d + ","
+		}
+	strings.TrimSuffix(depString, ",")
+	cmd := exec.Command("./spark-submit", "--deploy-mode", "cluster", "--master", ss.Master, "--py-files", depString, ss.Script)
+	return *cmd
 	}
 
 func consumeFromTopic(name string) {
@@ -38,11 +59,20 @@ func consumeFromTopic(name string) {
 			for _, t := range c.Settings {
 				if t.Topic == name {
 					for _, s := range t.Scripts {
-						fmt.Println(name+" topic, submitting script "+string(s))
+						fmt.Println(name+" topic, submitting script "+string(s.Script)+", dependencies: "+string(s.Dependencies[0]))
+						var ss SparkSubmit
+						ss.Master = sparkMaster
+						ss.Dependencies = s.Dependencies
+						ss.Script = s.Script
+						cmd := constructSubmitCommand(ss)
+						err := cmd.Start()
+						cmd.Wait()
+						if err != nil {
+							panic(err)
+							}
 						}
 					}
 				} 
-			// TODO: Sending the task to Spark
 			}
 		}()
 }
@@ -51,7 +81,7 @@ func main() {
 	
 	kafkaIp = "192.168.99.100"
 	kafkaPort = "9092"
-	sparkSubmitOptions = ""
+	sparkMaster = "spark"
 	
 	dat, err := ioutil.ReadFile("config.json")
     if err != nil {
