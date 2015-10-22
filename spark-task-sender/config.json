@@ -1,8 +1,10 @@
 {
 "settings":[
-		{"topic":"test1", "scripts":[
-			{"script":"boop.py", "dependencies":["something"]}, 
-			{"script":"baap.py", "dependencies":["stuff"]}
+		{"topic":"sql", "scripts":[
+			{
+			"script":"/Users/Gabo/GitHub/data-transformers/mysqlTransformer.py",
+			"dependencies":["TargetHolding:pyspark-cassandra:0.1.5"]
+			}
 		]}
 	]
 }

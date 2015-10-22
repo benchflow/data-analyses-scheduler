@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"github.com/Shopify/sarama"
 	"os/exec"
-	"strings"
 )
 
 var c Configuration
@@ -31,12 +30,8 @@ type SparkSubmit struct {
 	}
 
 func constructSubmitCommand(ss SparkSubmit) exec.Cmd {
-	depString := ""
-	for _, d := range ss.Dependencies {
-		depString = depString + d + ","
-		}
-	strings.TrimSuffix(depString, ",")
-	cmd := exec.Command("./spark-submit", "--deploy-mode", "cluster", "--master", ss.Master, "--py-files", depString, ss.Script)
+	//cmd := exec.Command("./spark-submit", "--deploy-mode", "cluster", "--master", ss.Master, ss.Script)
+	cmd := exec.Command("/Users/Gabo/Downloads/spark-1.5.1-bin-hadoop2.6/bin/spark-submit", "--master", ss.Master, "--packages", "TargetHolding:pyspark-cassandra:0.1.5", ss.Script, "local[*]", "localhost", "/Users/Gabo/PycharmProjects/Test/Camunda_dump_example_csv.csv.gz")
 	return *cmd
 	}
 
@@ -71,6 +66,7 @@ func consumeFromTopic(name string) {
 							panic(err)
 							}
 						}
+						fmt.Println("Script sent")
 					}
 				} 
 			}
