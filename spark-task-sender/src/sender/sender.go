@@ -12,26 +12,29 @@ var c Configuration
 var kafkaIp string
 var kafkaPort string
 var sparkMaster string
+var sparkHome string
+var cassandraHost string
 
 type Configuration struct {
 	Settings []struct {
 		Topic string `json:"topic"`
 		Scripts []struct {
 			Script string `json:"script"`
+			MappingConfiguration string `json:"mappingConfiguration"`
 			Dependencies []string `json:"dependencies"`
 			} `json:"scripts"`
 		} `json:settings`
 	}
 
 type SparkSubmit struct {
-	Master string
 	Dependencies []string
 	Script string
+	MappingConfiguration string
+	fileLocation string
 	}
 
 func constructSubmitCommand(ss SparkSubmit) exec.Cmd {
-	//cmd := exec.Command("./spark-submit", "--deploy-mode", "cluster", "--master", ss.Master, ss.Script)
-	cmd := exec.Command("/Users/Gabo/Downloads/spark-1.5.1-bin-hadoop2.6/bin/spark-submit", "--master", ss.Master, "--packages", "TargetHolding:pyspark-cassandra:0.1.5", ss.Script, "local[*]", "localhost", "/Users/Gabo/PycharmProjects/Test/Camunda_dump_example_csv.csv.gz")
+	cmd := exec.Command(sparkHome+"/bin/spark-submit", "--master", sparkMaster, "--packages", "TargetHolding:pyspark-cassandra:0.1.5", ss.Script, sparkMaster, cassandraHost, ss.fileLocation)
 	return *cmd
 	}
 
@@ -56,9 +59,10 @@ func consumeFromTopic(name string) {
 					for _, s := range t.Scripts {
 						fmt.Println(name+" topic, submitting script "+string(s.Script)+", dependencies: "+string(s.Dependencies[0]))
 						var ss SparkSubmit
-						ss.Master = sparkMaster
 						ss.Dependencies = s.Dependencies
 						ss.Script = s.Script
+						ss.MappingConfiguration = s.MappingConfiguration
+						ss.fileLocation = string(m.Value)
 						cmd := constructSubmitCommand(ss)
 						err := cmd.Start()
 						cmd.Wait()
@@ -77,7 +81,9 @@ func main() {
 	
 	kafkaIp = "192.168.99.100"
 	kafkaPort = "9092"
-	sparkMaster = "spark"
+	sparkMaster = "local[*]"
+	sparkHome = "/Users/Gabo/Downloads/spark-1.5.1-bin-hadoop2.6"
+	cassandraHost = "localhost"
 	
 	dat, err := ioutil.ReadFile("config.json")
     if err != nil {
