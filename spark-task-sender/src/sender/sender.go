@@ -85,7 +85,7 @@ func main() {
 	sparkHome = "/Users/Gabo/Downloads/spark-1.5.1-bin-hadoop2.6"
 	cassandraHost = "localhost"
 	
-	dat, err := ioutil.ReadFile("config.json")
+	dat, err := ioutil.ReadFile("config/config.json")
     if err != nil {
 			panic(err)
 			}
