@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"github.com/Shopify/sarama"
 	"os/exec"
+	"os"
 )
 
 var c Configuration
@@ -34,7 +35,7 @@ type SparkSubmit struct {
 	}
 
 func constructSubmitCommand(ss SparkSubmit) exec.Cmd {
-	cmd := exec.Command(sparkHome+"/bin/spark-submit", "--master", sparkMaster, "--packages", "TargetHolding:pyspark-cassandra:0.1.5", ss.Script, sparkMaster, cassandraHost, ss.fileLocation)
+	cmd := exec.Command(sparkHome+"/bin/spark-submit", "--master", sparkMaster, "--files", ss.MappingConfiguration, "--packages", "TargetHolding:pyspark-cassandra:0.1.5", ss.Script, sparkMaster, cassandraHost, ss.fileLocation)
 	return *cmd
 	}
 
@@ -78,12 +79,18 @@ func consumeFromTopic(name string) {
 }
 
 func main() {
-	
+	/*
 	kafkaIp = "192.168.99.100"
 	kafkaPort = "9092"
 	sparkMaster = "local[*]"
 	sparkHome = "/Users/Gabo/Downloads/spark-1.5.1-bin-hadoop2.6"
 	cassandraHost = "localhost"
+	*/
+	kafkaIp = os.Getenv("KAFKA_IP")
+	kafkaPort = os.Getenv("KAFKA_PORT")
+	sparkMaster = os.Getenv("SPARK_MASTER")
+	sparkHome = os.Getenv("SPARK_HOME")
+	cassandraHost = os.Getenv("CASSANDRA_IP")
 	
 	dat, err := ioutil.ReadFile("config/config.json")
     if err != nil {
