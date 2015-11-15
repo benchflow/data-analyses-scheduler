@@ -39,8 +39,22 @@ func constructSubmitCommand(ss SparkSubmit) exec.Cmd {
 	return *cmd
 	}
 
+func kafkaConsumer(name string) sarama.PartitionConsumer {
+	config := sarama.NewConfig()
+	consumer, err := sarama.NewConsumer([]string{kafkaIp+":"+kafkaPort}, config)
+	if err != nil {	
+		panic(err)
+		}
+	partConsumer, err := consumer.ConsumePartition(name, 0, sarama.OffsetNewest)
+	if err != nil {
+		panic(err)
+		}
+	return partConsumer
+}
+
 func consumeFromTopic(name string) {
 	go func() {
+		/*
 		config := sarama.NewConfig()
 		consumer, err := sarama.NewConsumer([]string{kafkaIp+":"+kafkaPort}, config)
 		if err != nil {
@@ -50,7 +64,9 @@ func consumeFromTopic(name string) {
 		if err != nil {
 		   	panic(err)
 		   	}
-		mc := partConsumer.Messages()
+		*/
+		consumer := kafkaConsumer(name)
+		mc := consumer.Messages()
 		fmt.Println("Consuming on topic " + name)
 		for true {
 			m := <- mc 
