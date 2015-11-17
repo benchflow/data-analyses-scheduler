@@ -22,20 +22,22 @@ type Configuration struct {
 		Scripts []struct {
 			Script string `json:"script"`
 			MappingConfiguration string `json:"mappingConfiguration"`
-			Dependencies []string `json:"dependencies"`
+			Packages string `json:"packages"`
 			} `json:"scripts"`
 		} `json:settings`
 	}
 
-type SparkSubmit struct {
-	Dependencies []string
-	Script string
-	MappingConfiguration string
-	fileLocation string
-	}
-
 func constructSubmitCommand(ss SparkSubmit) exec.Cmd {
-	cmd := exec.Command(sparkHome+"/bin/spark-submit", "--master", sparkMaster, "--files", ss.MappingConfiguration, "--packages", "TargetHolding:pyspark-cassandra:0.1.5", ss.Script, sparkMaster, cassandraHost, ss.fileLocation)
+	var args []string
+	args = append(args, "--master", ss.SparkMaster)
+	args = append(args, "--files", ss.MappingConfiguration)
+	args = append(args, "--packages", ss.Packages)
+	args = append(args, ss.Script)
+	args = append(args, ss.SparkMaster)
+	args = append(args, ss.CassandraHost)
+	args = append(args, ss.fileLocation)
+	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+	//cmd := exec.Command(sparkHome+"/bin/spark-submit", "--master", sparkMaster, "--files", ss.MappingConfiguration, "--packages", "TargetHolding:pyspark-cassandra:0.1.5", ss.Script, sparkMaster, cassandraHost, ss.fileLocation)
 	return *cmd
 	}
 
@@ -74,12 +76,16 @@ func consumeFromTopic(name string) {
 			for _, t := range c.Settings {
 				if t.Topic == name {
 					for _, s := range t.Scripts {
-						fmt.Println(name+" topic, submitting script "+string(s.Script)+", dependencies: "+string(s.Dependencies[0]))
+						fmt.Println(name+" topic, submitting script "+string(s.Script))
 						var ss SparkSubmit
-						ss.Dependencies = s.Dependencies
-						ss.Script = s.Script
-						ss.MappingConfiguration = s.MappingConfiguration
-						ss.fileLocation = string(m.Value)
+						ss = SparkCommandBuilder.
+							Packages(s.Packages).
+							Script(s.Script).
+							MappingConfiguration(s.MappingConfiguration).
+							FileLocation(string(m.Value)).
+							CassandraHost(cassandraHost).
+							SparkMaster(sparkMaster).
+							Build()
 						cmd := constructSubmitCommand(ss)
 						err := cmd.Start()
 						cmd.Wait()

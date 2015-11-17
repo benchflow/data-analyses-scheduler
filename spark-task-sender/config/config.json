@@ -4,7 +4,7 @@
 			{
 			"script":"/Users/Gabo/GitHub/data-transformers/mysqlTransformer.py",
 			"mappingConfiguration" : "/Users/Gabo/GitHub/data-transformers/conf.json",
-			"dependencies":[]
+			"packages": "TargetHolding:pyspark-cassandra:0.1.5"
 			}
 		]}
 	]
