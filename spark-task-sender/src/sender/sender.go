@@ -7,6 +7,7 @@ import (
 	"github.com/Shopify/sarama"
 	"os/exec"
 	"os"
+	"sync"
 )
 
 var c Configuration
@@ -15,6 +16,7 @@ var kafkaPort string
 var sparkMaster string
 var sparkHome string
 var cassandraHost string
+var waitGroup sync.WaitGroup
 
 type Configuration struct {
 	Settings []struct {
@@ -56,6 +58,7 @@ func kafkaConsumer(name string) sarama.PartitionConsumer {
 
 func consumeFromTopic(name string) {
 	go func() {
+		defer waitGroup.Done()
 		/*
 		config := sarama.NewConfig()
 		consumer, err := sarama.NewConsumer([]string{kafkaIp+":"+kafkaPort}, config)
@@ -123,11 +126,13 @@ func main() {
 			panic(err)
 			}
 	
+	waitGroup = sync.WaitGroup{}
+	
 	for _, sett := range c.Settings {
 		consumeFromTopic(sett.Topic)
+		waitGroup.Add(1)
 		}
 	
-	for true{}
-	
+	waitGroup.Wait()
 	}
 
