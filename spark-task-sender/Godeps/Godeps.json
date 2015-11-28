@@ -1,0 +1,32 @@
+{
+	"ImportPath": "sender",
+	"GoVersion": "go1.5.1",
+	"Packages": [
+		"."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/Shopify/sarama",
+			"Comment": "v1.6.1-4-gbc4baeb",
+			"Rev": "bc4baebf0521171e11b6b6661bb76564b9c568d6"
+		},
+		{
+			"ImportPath": "github.com/eapache/go-resiliency/breaker",
+			"Comment": "v1.0.0-1-ged0319b",
+			"Rev": "ed0319b32e66e3295db52695ba3ee493e823fbfe"
+		},
+		{
+			"ImportPath": "github.com/eapache/queue",
+			"Comment": "v1.0.2",
+			"Rev": "ded5959c0d4e360646dc9e9908cff48666781367"
+		},
+		{
+			"ImportPath": "github.com/golang/snappy",
+			"Rev": "723cc1e459b8eea2dea4583200fd60757d40097a"
+		},
+		{
+			"ImportPath": "github.com/klauspost/crc32",
+			"Rev": "f8d2e12057f7ef26ae42ecfa42697f4bdc32d7eb"
+		}
+	]
+}

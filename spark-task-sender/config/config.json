@@ -1,0 +1,11 @@
+{
+"settings":[
+		{"topic":"test", "scripts":[
+			{
+			"script":"/Users/Gabo/GitHub/data-transformers/mysqlTransformer.py",
+			"mappingConfiguration" : "/Users/Gabo/GitHub/data-transformers/conf.json",
+			"packages": "TargetHolding:pyspark-cassandra:0.1.5"
+			}
+		]}
+	]
+}
