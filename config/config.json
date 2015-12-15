@@ -1,9 +1,20 @@
 {
-"settings":[
-		{"topic":"test", "scripts":[
+"transformers_settings":[
+		{"topic":"stats", "scripts":[
 			{
-			"script":"/Users/Gabo/GitHub/data-transformers/mysqlTransformer.py",
-			"mappingConfiguration" : "/Users/Gabo/GitHub/data-transformers/conf.json",
+			"script":"/Users/Gabo/GitHub/data-transformers/statsTransformer.py",
+			"files" : "/Users/Gabo/GitHub/data-transformers/conf.json",
+			"py_files" : "/Users/Gabo/GitHub/data-transformers/dataTransformations.py",
+			"packages": "TargetHolding:pyspark-cassandra:0.1.5"
+			}
+		]}
+	],
+"analysers_settings":[
+		{"requirements":"A_1,A_2", "scripts":[
+			{
+			"script":"/Users/Gabo/GitHub/analysers/repProcessDurationAvg.py",
+			"files" : "/Users/Gabo/GitHub/data-transformers/conf.json",
+			"py_files" : "/Users/Gabo/GitHub/data-transformers/dataTransformations.py",
 			"packages": "TargetHolding:pyspark-cassandra:0.1.5"
 			}
 		]}
