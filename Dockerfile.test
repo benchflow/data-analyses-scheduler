@@ -1,12 +1,29 @@
-FROM benchflow/base-images:envconsul_dev
+FROM benchflow/base-images:envconsul-java8_dev
 
 MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
 
-RUN apk --update add gzip && \
+ENV SPARK_HOME /usr/spark
+ENV SPARK_VERSION 1.5.1
+ENV HADOOP_VERSION 2.6
+
+# Add Spark
+RUN apk --update add curl && \
+    curl \
+	--location \
+	--retry 3 \
+	http://d3kbcqa49mib13.cloudfront.net/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz \
+	| gunzip \
+	| tar x -C /usr/ && \
+    ln -s /usr/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION /usr/spark
+
+# Separate so that Docker can cache the Spark layer
+RUN apk del --purge curl && \
     rm -rf /var/cache/apk/*
 
-COPY ./bin/zip_linux /app/zip
-RUN chmod +x /app/zip
-COPY ./services/300-files-zip-collector.conf /apps/chaperone.d/300-files-zip-collector.conf
+COPY ./config /app/config
+
+COPY ./bin/spark-tasks-sender_linux /app/spark-tasks-sender
+RUN chmod +x /app/spark-tasks-sender
+COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-sender.conf
  
 EXPOSE 8080
