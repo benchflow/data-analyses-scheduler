@@ -1,0 +1,12 @@
+FROM benchflow/base-images:envconsul_dev
+
+MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
+
+RUN apk --update add gzip && \
+    rm -rf /var/cache/apk/*
+
+COPY ./bin/zip_linux /app/zip
+RUN chmod +x /app/zip
+COPY ./services/300-files-zip-collector.conf /apps/chaperone.d/300-files-zip-collector.conf
+ 
+EXPOSE 8080
