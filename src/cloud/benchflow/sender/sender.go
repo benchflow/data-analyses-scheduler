@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"github.com/Shopify/sarama"
 	"os/exec"
-	//"os"
+	"os"
 	"sync"
 	"strings"
 )
@@ -156,20 +156,13 @@ func waitToAnalyse(a AnalyserSetting) {
 
 func main() {
 	
-	kafkaIp = "127.0.0.1"
-	kafkaPort = "9092"
-	sparkMaster = "local[*]"
-	sparkHome = "/Users/Gabo/Downloads/spark-1.5.1-bin-hadoop2.6"
-	cassandraHost = "localhost"
-	minioHost = "localhost"
-	/*
 	kafkaIp = os.Getenv("KAFKA_IP")
 	kafkaPort = os.Getenv("KAFKA_PORT")
 	sparkMaster = os.Getenv("SPARK_MASTER")
 	sparkHome = os.Getenv("SPARK_HOME")
 	cassandraHost = os.Getenv("CASSANDRA_IP")
 	minioHost = os.Getenv("MINIO_IP")
-	*/
+	
 	dat, err := ioutil.ReadFile("config/config.json")
     if err != nil {
 			panic(err)

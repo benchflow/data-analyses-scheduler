@@ -11,7 +11,8 @@ ENV ANALYSERS_VERSION v-dev
 ENV PLUGINS_VERSION v-dev
 ENV CONFIGURATION_FILTER 'data-transformers-config.json'
 
-RUN apk --update add curl tar && \
+# TODO: remove python, when Spark will be used outside of the container
+RUN apk --update add curl tar python && \
 	# Add Spark
     curl \
 	--location \
@@ -44,5 +45,18 @@ COPY ./config /app/config
 COPY ./bin/spark-tasks-sender_linux /app/spark-tasks-sender
 RUN chmod +x /app/spark-tasks-sender
 COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-sender.conf
+
+#TODO: remove, when Spark will be used as a service outside of this container
+COPY ./services/400-clean-tmp-folder.conf /apps/chaperone.d/400-clean-tmp-folder.conf
+
+#TODO: remove, when Spark will be used as a service outside of this container
+# disable the Spark UI when launching scripts (http://stackoverflow.com/questions/33774350/how-to-disable-sparkui-programmatically/33784803#33784803)
+RUN cp $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf \
+    && sed -i -e '$aspark.ui.enabled false' $SPARK_HOME/conf/spark-defaults.conf
+
+#TODO: remove, here for testing purposes
+RUN touch /app/test.tpl
+#TODO: remove, here because of a problem killing the container
+RUN rm /apps/chaperone.d/200-envconsul-envcp.conf
  
 EXPOSE 8080

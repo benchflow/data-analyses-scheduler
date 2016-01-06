@@ -41,7 +41,14 @@ build_container_local:
 	rm bin/$(REPONAME)_linux
 
 test_container_local:
-	#TODO
+	docker run -d -p 8080:8080 \
+	-e "ENVCONSUL_CONSUL=$(ENVCONSUL_CONSUL_IP):$(ENVCONSUL_CONSUL_PORT)" \
+	-e "KAFKA_IP=$(KAFKA_IP)" \
+	-e "KAFKA_PORT=$(KAFKA_PORT)" \
+	-e "SPARK_MASTER=local[*]" \
+	-e "CASSANDRA_IP=$(CASSANDRA_IP)" \
+	-e "MINIO_IP=$(MINIO_IP)" \
+	--name $(REPONAME) $(DOCKERIMAGENAME):$(VERSION)
 
 rm_container_local:
-	#TODO
+	docker rm -f -v $(REPONAME)
