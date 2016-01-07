@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"io/ioutil"
-	"github.com/Shopify/sarama"
+	"Github.com/Shopify/sarama"
 	"os/exec"
 	"os"
 	"sync"
@@ -42,6 +42,11 @@ type Script struct {
 	Files string `json:"files"`
 	PyFiles string `json:"py_files"`
 	Packages string `json:"packages"`
+	}
+
+type KafkaMessage struct {
+	Minio_key string `json:"minio_key"`
+	Trial_id string `json:"trial_id"`
 	}
 
 func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
@@ -82,7 +87,7 @@ func kafkaConsumer(name string) sarama.PartitionConsumer {
 	if err != nil {	
 		panic(err)
 		}
-	partConsumer, err := consumer.ConsumePartition(name, 0, sarama.OffsetNewest)
+	partConsumer, err := consumer.ConsumePartition(name, 0, sarama.OffsetOldest)
 	if err != nil {
 		panic(err)
 		}
@@ -96,20 +101,26 @@ func consumeFromTopic(t TransformerSetting) {
 		fmt.Println("Consuming on topic " + t.Topic)
 		for true {
 			m := <- mc 
-			msg := strings.Split(string(m.Value), ",")
-			fmt.Println(t.Topic+" received: "+msg[0])
+			//msg := strings.Split(string(m.Value), ",")
+			var msg KafkaMessage
+			err := json.Unmarshal(m.Value, &msg)
+			if err != nil {
+				panic(err)
+				}
+			fmt.Println(t.Topic+" received: "+msg.Minio_key)
 				for _, s := range t.Scripts {
-					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", "+msg[0]+", "+msg[1]+", "+msg[2])
+					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+msg.Minio_key+", trial id: "+msg.Trial_id)
 					ss := SparkCommandBuilder.
 						Packages(s.Packages).
 						Script(s.Script).
 						Files(s.Files).
 						PyFiles(s.PyFiles).
-						FileLocation(msg[0]).
+						FileLocation(msg.Minio_key).
 						CassandraHost(cassandraHost).
 						MinioHost(cassandraHost).
-						TrialID(msg[1]).
-						ContainerID(msg[2]).
+						TrialID(msg.Trial_id).
+						// TODO: Retrieve real container ID
+						ContainerID("00cc9619-66a1-9e11-e594-91c8e0eb1859").
 						SparkMaster(sparkMaster).
 						Build()
 					cmd := constructTransformerSubmitCommand(ss)
@@ -119,7 +130,7 @@ func consumeFromTopic(t TransformerSetting) {
 						panic(err)
 						}
 					fmt.Println("Script "+s.Script+" processed")
-					close(requirementChannels[msg[1]])
+					close(requirementChannels[msg.Trial_id])
 					}
 			}
 			waitGroup.Done()
@@ -133,7 +144,6 @@ func waitToAnalyse(a AnalyserSetting) {
 			}
 		for _, s := range a.Scripts {
 				fmt.Println("Analysing with "+s.Script)
-				/*
 				ss := SparkCommandBuilder.
 						Packages(s.Packages).
 						Script(s.Script).
@@ -148,14 +158,12 @@ func waitToAnalyse(a AnalyserSetting) {
 				if err != nil {
 					panic(err)
 					}
-				*/
 				fmt.Println("Script "+s.Script+" processed")
 				}
 		}()
 	}
 
 func main() {
-	
 	kafkaIp = os.Getenv("KAFKA_IP")
 	kafkaPort = os.Getenv("KAFKA_PORT")
 	sparkMaster = os.Getenv("SPARK_MASTER")
