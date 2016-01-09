@@ -130,7 +130,8 @@ func consumeFromTopic(t TransformerSetting) {
 						panic(err)
 						}
 					fmt.Println("Script "+s.Script+" processed")
-					close(requirementChannels[msg.Trial_id])
+					launchAllScripts(msg.Trial_id)
+					//close(requirementChannels[msg.Trial_id])
 					}
 			}
 			waitGroup.Done()
@@ -163,6 +164,28 @@ func waitToAnalyse(a AnalyserSetting) {
 		}()
 	}
 
+// TODO: Hardcoded for testing
+func launchAllScripts(trialID string) {
+	scripts := []string{"/app/analysers/processDuration.py", "/app/analysers/cpu.py", "/app/analysers/ram.py", "/app/analysers/numberOfProcessInstances.py"}
+	for _, s := range scripts {
+			var args []string
+			args = append(args, "--master", "local[*]")
+			args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
+			args = append(args, s)
+			args = append(args, "local[*]")
+			args = append(args, os.Getenv("CASSANDRA_IP"))
+			args = append(args, trialID)
+			fmt.Println(args)
+			cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+			err := cmd.Start()
+			cmd.Wait()
+			if err != nil {
+				panic(err)
+				}
+			fmt.Println("Script "+s+" processed")
+		}
+	}
+
 func main() {
 	kafkaIp = os.Getenv("KAFKA_IP")
 	kafkaPort = os.Getenv("KAFKA_PORT")
@@ -187,7 +210,7 @@ func main() {
 		for _, req := range strings.Split(sett.Requirements, ",") {
 			requirementChannels[req] = make(chan bool)	
 			}
-		waitToAnalyse(sett)
+		//waitToAnalyse(sett)
 		}
 	
 	for _, sett := range c.TransformersSettings {

@@ -1,11 +1,19 @@
 {
 "transformers_settings":[
-		{"topic":"taskSenderTest", "scripts":[
+		{"topic":"stats", "scripts":[
 			{
 			"script":"/app/data-transformers/statsTransformer.py",
 			"files" : "/app/data-transformers/conf/wfms/camunda/data-transformers-config.json",
 			"py_files" : "/app/data-transformers/dataTransformations.py",
-			"packages": "TargetHolding:pyspark-cassandra:0.1.5"
+			"packages": "TargetHolding:pyspark-cassandra:0.2.2"
+			}
+		]},
+		{"topic":"mysqldump", "scripts":[
+			{
+			"script":"/app/data-transformers/mysqlTransformer.py",
+			"files" : "/app/data-transformers/conf/wfms/camunda/data-transformers-config.json",
+			"py_files" : "/app/data-transformers/dataTransformations.py",
+			"packages": "TargetHolding:pyspark-cassandra:0.2.2"
 			}
 		]}
 	],
@@ -15,7 +23,7 @@
 			"script":"/app/analysers/repProcessDurationAvg.py",
 			"files" : "",
 			"py_files" : "",
-			"packages": "TargetHolding:pyspark-cassandra:0.1.5"
+			"packages": "TargetHolding:pyspark-cassandra:0.2.2"
 			}
 		]}
 	]
