@@ -9,7 +9,8 @@ ENV SPARK_TASKS_SENDER_VERSION v-dev
 ENV DATA_TRANSFORMERS_VERSION v-dev
 ENV ANALYSERS_VERSION v-dev
 ENV PLUGINS_VERSION v-dev
-ENV CONFIGURATION_FILTER 'data-transformers-config.json'
+#TODO: use this, currently we use a local configuration for testing purposes
+# ENV CONFIGURATION_FILTER 'config.json'
 
 # TODO: remove python, when Spark will be used outside of the container
 RUN apk --update add curl tar python && \
@@ -33,9 +34,10 @@ RUN apk --update add curl tar python && \
     wget -q -O - https://github.com/benchflow/analysers/archive/$ANALYSERS_VERSION.tar.gz \
     | tar xz --strip-components=2 -C /app/analysers analysers-$ANALYSERS_VERSION/analysers && \
     # Get plugins (configuration files)
-    mkdir -p /app/data-transformers/conf && \
-    wget -q -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
-    | tar xz --strip-components=1 -C ./app/data-transformers/conf --wildcards --no-anchored $CONFIGURATION_FILTER && \
+    #TODO: use this, currently we use a local configuration for testing purposes
+    # mkdir -p /app/data-transformers/conf && \
+    # wget -q -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
+    # | tar xz --strip-components=1 -C ./app/data-transformers/conf --wildcards --no-anchored $CONFIGURATION_FILTER && \
     # Clean up
     apk del --purge curl tar && \
     rm -rf /var/cache/apk/*

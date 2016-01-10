@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"io/ioutil"
-	"Github.com/Shopify/sarama"
+	"github.com/Shopify/sarama"
 	"os/exec"
 	"os"
 	"sync"
