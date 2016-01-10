@@ -1,0 +1,10 @@
+{ "settings": 
+	[
+		{
+		  "src_table": "ACT_HI_PROCINST",
+		  "dest_table": "process",
+		  "column_mapping": {"DURATION_": "duration", "PROC_INST_ID_":"process_instance_id"},
+		  "column_transformation": {"DURATION_": "secondsToMilliseconds"}
+		}
+	]
+}

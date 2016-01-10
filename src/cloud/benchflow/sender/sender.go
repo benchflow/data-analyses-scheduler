@@ -55,6 +55,8 @@ func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, "--files", ss.Files)
 	args = append(args, "--py-files", ss.PyFiles)
 	args = append(args, "--packages", ss.Packages)
+	// TODO: Move this in a configuration
+	//args = append(args, "--conf", "spark.driver.memory=4g")
 	args = append(args, ss.Script)
 	args = append(args, ss.SparkMaster)
 	args = append(args, ss.CassandraHost)
@@ -73,6 +75,8 @@ func constructAnalyserSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, "--files", ss.Files)
 	args = append(args, "--py-files", ss.PyFiles)
 	args = append(args, "--packages", ss.Packages)
+	// TODO: Move this in a configuration
+	//args = append(args, "--conf", "spark.driver.memory=4g")
 	args = append(args, ss.Script)
 	args = append(args, ss.SparkMaster)
 	args = append(args, ss.CassandraHost)
@@ -115,7 +119,7 @@ func consumeFromTopic(t TransformerSetting) {
 						Script(s.Script).
 						Files(s.Files).
 						PyFiles(s.PyFiles).
-						FileLocation(msg.Minio_key).
+						FileLocation("runs/"+msg.Minio_key).
 						CassandraHost(cassandraHost).
 						MinioHost(cassandraHost).
 						TrialID(msg.Trial_id).
