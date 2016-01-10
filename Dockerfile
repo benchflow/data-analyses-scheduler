@@ -43,6 +43,8 @@ RUN apk --update add curl tar python && \
     rm -rf /var/cache/apk/*
 
 COPY ./config /app/config
+# TODO: Remove this
+COPY ./conf /app/data-transformers/conf
 	
 COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-sender.conf
 

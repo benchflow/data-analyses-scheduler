@@ -44,7 +44,7 @@ test:
 
 build_container_local:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 godep go build -ldflags '-s' -o bin/$(REPONAME)_linux -v ./...
-	docker build -t $(DOCKERIMAGENAME):$(VERSION) -f Dockerfile.test .
+	docker build --no-cache -t $(DOCKERIMAGENAME):$(VERSION) -f Dockerfile.test .
 	rm bin/$(REPONAME)_linux
 
 test_container_local:
