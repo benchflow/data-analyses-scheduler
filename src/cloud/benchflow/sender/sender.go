@@ -170,7 +170,7 @@ func waitToAnalyse(a AnalyserSetting) {
 
 // TODO: Hardcoded for testing
 func launchAllScripts(trialID string) {
-	scripts := []string{"/app/analysers/processDuration.py", "/app/analysers/cpu.py", "/app/analysers/ram.py", "/app/analysers/numberOfProcessInstances.py"}
+	scripts := []string{"/app/analysers/processDuration.py", "/app/analysers/cpu.py", "/app/analysers/ram.py", "/app/analysers/numberOfProcessInstances.py", "/app/analysers/throughput.py"}
 	for _, s := range scripts {
 			var args []string
 			args = append(args, "--master", "local[*]")
