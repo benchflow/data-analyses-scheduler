@@ -56,7 +56,7 @@ func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, "--py-files", ss.PyFiles)
 	args = append(args, "--packages", ss.Packages)
 	// TODO: Move this in a configuration
-	//args = append(args, "--conf", "spark.driver.memory=4g")
+	args = append(args, "--conf", "spark.driver.memory=2g")
 	args = append(args, ss.Script)
 	args = append(args, ss.SparkMaster)
 	args = append(args, ss.CassandraHost)
@@ -76,7 +76,7 @@ func constructAnalyserSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, "--py-files", ss.PyFiles)
 	args = append(args, "--packages", ss.Packages)
 	// TODO: Move this in a configuration
-	//args = append(args, "--conf", "spark.driver.memory=4g")
+	args = append(args, "--conf", "spark.driver.memory=2g")
 	args = append(args, ss.Script)
 	args = append(args, ss.SparkMaster)
 	args = append(args, ss.CassandraHost)
