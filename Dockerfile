@@ -42,7 +42,7 @@ RUN apk --update add curl tar python && \
     apk del --purge curl tar && \
     rm -rf /var/cache/apk/*
 
-COPY ./config /app/config
+COPY ./configuration /app/configuration
 # TODO: Remove this
 COPY ./conf /app/data-transformers/conf
 	
