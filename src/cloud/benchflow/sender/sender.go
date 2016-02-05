@@ -198,7 +198,7 @@ func main() {
 	cassandraHost = os.Getenv("CASSANDRA_IP")
 	minioHost = os.Getenv("MINIO_IP")
 	
-	dat, err := ioutil.ReadFile("config/config.json")
+	dat, err := ioutil.ReadFile("configuration/config.json")
     if err != nil {
 			panic(err)
 			}
