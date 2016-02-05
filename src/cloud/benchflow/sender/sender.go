@@ -121,7 +121,7 @@ func consumeFromTopic(t TransformerSetting) {
 						PyFiles(s.PyFiles).
 						FileLocation("runs/"+msg.Minio_key).
 						CassandraHost(cassandraHost).
-						MinioHost(cassandraHost).
+						MinioHost(minioHost).
 						TrialID(msg.Trial_id).
 						// TODO: Retrieve real container ID
 						ContainerID("00cc9619-66a1-9e11-e594-91c8e0eb1859").
