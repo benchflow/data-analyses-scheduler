@@ -48,6 +48,9 @@ COPY ./conf /app/data-transformers/conf
 
 COPY ./bin/spark-tasks-sender_linux /app/spark-tasks-sender
 RUN chmod +x /app/spark-tasks-sender
+
+COPY ./services/envcp/config.tpl /app/config.tpl
+
 COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-sender.conf
 
 #TODO: remove, when Spark will be used as a service outside of this container

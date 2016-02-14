@@ -45,6 +45,8 @@ RUN apk --update add curl tar python && \
 COPY ./configuration /app/configuration
 # TODO: Remove this
 COPY ./conf /app/data-transformers/conf
+
+COPY ./services/envcp/config.tpl /app/config.tpl
 	
 COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-sender.conf
 
