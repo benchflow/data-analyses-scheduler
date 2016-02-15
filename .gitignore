@@ -1,2 +1,4 @@
 bin/
 Godeps/_workspace/pkg/
+
+benchflow_make

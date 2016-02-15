@@ -1,4 +1,4 @@
-FROM benchflow/base-images:envconsul-java8_dev
+FROM benchflow/base-images:dns-envconsul-java8_dev
 
 MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
 
@@ -42,9 +42,11 @@ RUN apk --update add curl tar python && \
     apk del --purge curl tar && \
     rm -rf /var/cache/apk/*
 
-COPY ./config /app/config
+COPY ./configuration /app/configuration
 # TODO: Remove this
 COPY ./conf /app/data-transformers/conf
+
+COPY ./services/envcp/config.tpl /app/config.tpl
 	
 COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-sender.conf
 
@@ -55,10 +57,5 @@ COPY ./services/400-clean-tmp-folder.conf /apps/chaperone.d/400-clean-tmp-folder
 # disable the Spark UI when launching scripts (http://stackoverflow.com/questions/33774350/how-to-disable-sparkui-programmatically/33784803#33784803)
 RUN cp $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf \
     && sed -i -e '$aspark.ui.enabled false' $SPARK_HOME/conf/spark-defaults.conf
-
-#TODO: remove, here for testing purposes
-RUN touch /app/test.tpl
-#TODO: remove, here because of a problem killing the container
-RUN rm /apps/chaperone.d/200-envconsul-envcp.conf
  
 EXPOSE 8080

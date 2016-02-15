@@ -56,7 +56,7 @@ func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, "--py-files", ss.PyFiles)
 	args = append(args, "--packages", ss.Packages)
 	// TODO: Move this in a configuration
-	//args = append(args, "--conf", "spark.driver.memory=4g")
+	args = append(args, "--conf", "spark.driver.memory=4g")
 	args = append(args, ss.Script)
 	args = append(args, ss.SparkMaster)
 	args = append(args, ss.CassandraHost)
@@ -76,7 +76,7 @@ func constructAnalyserSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, "--py-files", ss.PyFiles)
 	args = append(args, "--packages", ss.Packages)
 	// TODO: Move this in a configuration
-	//args = append(args, "--conf", "spark.driver.memory=4g")
+	args = append(args, "--conf", "spark.driver.memory=4g")
 	args = append(args, ss.Script)
 	args = append(args, ss.SparkMaster)
 	args = append(args, ss.CassandraHost)
@@ -121,7 +121,7 @@ func consumeFromTopic(t TransformerSetting) {
 						PyFiles(s.PyFiles).
 						FileLocation("runs/"+msg.Minio_key).
 						CassandraHost(cassandraHost).
-						MinioHost(cassandraHost).
+						MinioHost(minioHost).
 						TrialID(msg.Trial_id).
 						// TODO: Retrieve real container ID
 						ContainerID("00cc9619-66a1-9e11-e594-91c8e0eb1859").
@@ -198,7 +198,7 @@ func main() {
 	cassandraHost = os.Getenv("CASSANDRA_IP")
 	minioHost = os.Getenv("MINIO_IP")
 	
-	dat, err := ioutil.ReadFile("config/config.json")
+	dat, err := ioutil.ReadFile("configuration/config.json")
     if err != nil {
 			panic(err)
 			}
