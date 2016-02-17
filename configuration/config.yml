@@ -1,0 +1,19 @@
+transformers_settings: 
+    - topic: "stats"
+      scripts: 
+        - script: "/app/data-transformers/statsTransformer.py"
+          files: "/app/data-transformers/conf/conf.json"
+          py_files: "/app/data-transformers/dataTransformations.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
+    - topic: "mysqldump"
+      scripts: 
+        - script: "/app/data-transformers/mysqlTransformer.py"
+          files: "/app/data-transformers/conf/conf.json"
+          py_files: "/app/data-transformers/dataTransformations.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
+analysers_settings: 
+    - requirements: "stats"
+      scripts: 
+        - script_trial: "/app/analysers/trials/ram.py"
+          script_experiment: ""
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
