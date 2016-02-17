@@ -190,8 +190,7 @@ func launchAnalyserScript(trialID string, totalTrials int, req string) {
 		_, present := trialCount[expID]
 		if(present) {
 			trialCount[expID] += 1
-			}
-		if(!present) {
+			} else {
 			trialCount[expID] = 1
 			}
 		if(trialCount[expID] == totalTrials) {
