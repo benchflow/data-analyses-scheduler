@@ -20,7 +20,6 @@ var trialCount map[string] int
 var c Configuration
 var kafkaIp string
 var kafkaPort string
-var kafkaGroup string
 var sparkMaster string
 var sparkHome string
 var cassandraHost string
@@ -125,7 +124,7 @@ func kafkaConsumer(name string) consumergroup.ConsumerGroup {
 	config.ClientID = "benchflow"
 	config.Offsets.Initial = sarama.OffsetNewest
 	config.Offsets.ProcessingTimeout = 10 * time.Second
-	consumer, _ := consumergroup.JoinConsumerGroup(kafkaGroup, []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
+	consumer, _ := consumergroup.JoinConsumerGroup(name+"SparkTasksSenderGroup", []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
 	return *consumer
 	}
 
@@ -229,7 +228,6 @@ func launchAnalyserScript(trialID string, totalTrials int, req string) {
 func main() {
 	kafkaIp = os.Getenv("KAFKA_IP")
 	kafkaPort = os.Getenv("KAFKA_PORT")
-	kafkaGroup = os.Getenv("KAFKA_GROUP")
 	sparkMaster = os.Getenv("SPARK_MASTER")
 	sparkHome = os.Getenv("SPARK_HOME")
 	cassandraHost = os.Getenv("CASSANDRA_IP")
