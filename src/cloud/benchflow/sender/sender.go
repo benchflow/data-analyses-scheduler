@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"github.com/Shopify/sarama"
+	"gopkg.in/yaml.v2"
 	"os/exec"
 	"os"
 	"sync"
 	"strings"
 )
 
-var requirementChannels map[string] chan bool
+var trialCount map[string] int
 
 var c Configuration
 var kafkaIp string
@@ -22,31 +23,45 @@ var cassandraHost string
 var minioHost string
 var waitGroup sync.WaitGroup
 
+var mutex = &sync.Mutex{}
+
 type Configuration struct {
-	TransformersSettings []TransformerSetting `json:"transformers_settings"`
-	AnalysersSettings []AnalyserSetting `json:"analysers_settings"`
+	TransformersSettings []TransformerSetting `yaml:"transformers_settings"`
+	AnalysersSettings []AnalyserSetting `yaml:"analysers_settings"`
 	}
 
 type AnalyserSetting struct {
-	Requirements string `json:"requirements"`
-	Scripts []Script `json:"scripts"`
+	Requirements string `yaml:"requirements"`
+	Scripts []AnalyserScript `yaml:"scripts"`
 }
 
 type TransformerSetting struct {
-	Topic string `json:"topic"`
-	Scripts []Script `json:"scripts"`
+	Topic string `yaml:"topic"`
+	Scripts []Script `yaml:"scripts"`
 }
 
 type Script struct {
-	Script string `json:"script"`
-	Files string `json:"files"`
-	PyFiles string `json:"py_files"`
-	Packages string `json:"packages"`
+	Script string `yaml:"script"`
+	Files string `yaml:"files"`
+	PyFiles string `yaml:"py_files"`
+	Packages string `yaml:"packages"`
+	}
+
+type AnalyserScript struct {
+	TrialScript string `yaml:"script_trial"`
+	ExperimentScript string `yaml:"script_experiment"`
+	Files string `yaml:"files"`
+	PyFiles string `yaml:"py_files"`
+	Packages string `yaml:"packages"`
 	}
 
 type KafkaMessage struct {
+	SUT_name string `json:"SUT_name"`
+	SUT_version string `json:"SUT_version"`
 	Minio_key string `json:"minio_key"`
 	Trial_id string `json:"trial_id"`
+	Experiment_id string `json:"experiment_id"`
+	Total_trials_num int `json:"total_trials_num"`
 	}
 
 func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
@@ -63,6 +78,7 @@ func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, ss.MinioHost)
 	args = append(args, ss.FileLocation)
 	args = append(args, ss.TrialID)
+	args = append(args, ss.SUTName)
 	args = append(args, ss.ContainerID)
 	fmt.Println(args)
 	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
@@ -104,8 +120,7 @@ func consumeFromTopic(t TransformerSetting) {
 		mc := consumer.Messages()
 		fmt.Println("Consuming on topic " + t.Topic)
 		for true {
-			m := <- mc 
-			//msg := strings.Split(string(m.Value), ",")
+			m := <- mc
 			var msg KafkaMessage
 			err := json.Unmarshal(m.Value, &msg)
 			if err != nil {
@@ -117,76 +132,72 @@ func consumeFromTopic(t TransformerSetting) {
 					ss := SparkCommandBuilder.
 						Packages(s.Packages).
 						Script(s.Script).
-						Files(s.Files).
+						//Files(s.Files).
+						Files("/app/configuration/data-transformers/"+msg.SUT_name+".data-transformers.yml").
 						PyFiles(s.PyFiles).
 						FileLocation("runs/"+msg.Minio_key).
 						CassandraHost(cassandraHost).
 						MinioHost(minioHost).
 						TrialID(msg.Trial_id).
+						SUTName(msg.SUT_name).
 						// TODO: Retrieve real container ID
 						ContainerID("00cc9619-66a1-9e11-e594-91c8e0eb1859").
 						SparkMaster(sparkMaster).
 						Build()
 					cmd := constructTransformerSubmitCommand(ss)
+					cmd.Stdout = os.Stdout
+    				cmd.Stderr = os.Stderr
 					err := cmd.Start()
 					cmd.Wait()
 					if err != nil {
 						panic(err)
 						}
 					fmt.Println("Script "+s.Script+" processed")
-					launchAllScripts(msg.Trial_id)
-					//close(requirementChannels[msg.Trial_id])
+					launchAnalyserScript(msg.Trial_id, msg.Total_trials_num, t.Topic)
 					}
 			}
 			waitGroup.Done()
 		}()
 }
 
-func waitToAnalyse(a AnalyserSetting) {
-	go func () {
-		for _, req := range strings.Split(a.Requirements, ",") {
-				<-requirementChannels[req]
+func launchAnalyserScript(trialID string, totalTrials int, req string) {
+	var scripts []AnalyserScript
+	for _, s := range c.AnalysersSettings {
+		if s.Requirements == req {
+				scripts = s.Scripts
 			}
-		for _, s := range a.Scripts {
-				fmt.Println("Analysing with "+s.Script)
-				ss := SparkCommandBuilder.
-						Packages(s.Packages).
-						Script(s.Script).
-						Files(s.Files).
-						PyFiles(s.PyFiles).
-						CassandraHost(cassandraHost).
-						SparkMaster(sparkMaster).
-						Build()		
-				cmd := constructAnalyserSubmitCommand(ss)
-				err := cmd.Start()
-				cmd.Wait()
-				if err != nil {
-					panic(err)
-					}
-				fmt.Println("Script "+s.Script+" processed")
-				}
-		}()
-	}
-
-// TODO: Hardcoded for testing
-func launchAllScripts(trialID string) {
-	scripts := []string{"/app/analysers/processDuration.py", "/app/analysers/cpu.py", "/app/analysers/ram.py", "/app/analysers/numberOfProcessInstances.py", "/app/analysers/throughput.py"}
+		}
 	for _, s := range scripts {
-			var args []string
-			args = append(args, "--master", "local[*]")
-			args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
-			args = append(args, s)
-			args = append(args, "local[*]")
-			args = append(args, os.Getenv("CASSANDRA_IP"))
-			args = append(args, trialID)
-			fmt.Println(args)
-			cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
-			err := cmd.Start()
-			cmd.Wait()
-			if err != nil {
-				panic(err)
-				}
-			fmt.Println("Script "+s+" processed")
+		var args []string
+		args = append(args, "--master", "local[*]")
+		args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
+		args = append(args, s.TrialScript)
+		args = append(args, "local[*]")
+		args = append(args, os.Getenv("CASSANDRA_IP"))
+		args = append(args, trialID)
+		fmt.Println(args)
+		cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+		cmd.Stdout = os.Stdout
+    	cmd.Stderr = os.Stderr
+		err := cmd.Start()
+		cmd.Wait()
+		if err != nil {
+			panic(err)
+			}
+		fmt.Println("Script "+s.TrialScript+" processed")
+		expID := strings.Split(trialID, "_")[0]
+		mutex.Lock()
+		_, present := trialCount[expID]
+		if(present) {
+			trialCount[expID] += 1
+			} else {
+			trialCount[expID] = 1
+			}
+		if(trialCount[expID] == totalTrials) {
+			// Launch Experiment metric
+			fmt.Printf("All trials for experiment "+expID+" completed")
+			}
+		mutex.Unlock()
 		}
 	}
 
@@ -198,24 +209,18 @@ func main() {
 	cassandraHost = os.Getenv("CASSANDRA_IP")
 	minioHost = os.Getenv("MINIO_IP")
 	
-	dat, err := ioutil.ReadFile("configuration/config.json")
+	dat, err := ioutil.ReadFile("configuration/config.yml")
     if err != nil {
 			panic(err)
 			}
-	err = json.Unmarshal(dat, &c)
+	
+	err = yaml.Unmarshal(dat, &c)
 	if err != nil {
 			panic(err)
 			}
+	fmt.Println(c.AnalysersSettings)
 	
 	waitGroup = sync.WaitGroup{}
-	requirementChannels = make(map[string]chan bool)
-	
-	for _, sett := range c.AnalysersSettings {
-		for _, req := range strings.Split(sett.Requirements, ",") {
-			requirementChannels[req] = make(chan bool)	
-			}
-		//waitToAnalyse(sett)
-		}
 	
 	for _, sett := range c.TransformersSettings {
 		consumeFromTopic(sett)

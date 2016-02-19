@@ -11,6 +11,7 @@ type SparkSubmit struct {
 	FileLocation string
 	TrialID string
 	ContainerID string
+	SUTName string
 	Script string
 	Files string
 	PyFiles string
@@ -57,6 +58,10 @@ func (b sparkCommandBuilder) Packages(packages string) sparkCommandBuilder {
 
 func (b sparkCommandBuilder) FileLocation(fileLocation string) sparkCommandBuilder {
     return builder.Set(b, "FileLocation", fileLocation).(sparkCommandBuilder)
+}
+
+func (b sparkCommandBuilder) SUTName(SutName string) sparkCommandBuilder {
+    return builder.Set(b, "SUTName", SutName).(sparkCommandBuilder)
 }
 
 func (b sparkCommandBuilder) Build() SparkSubmit {

@@ -32,6 +32,10 @@
 		{
 			"ImportPath": "github.com/lann/ps",
 			"Rev": "62de8c46ede02a7675c4c79c84883eb164cb71e3"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "f7716cbe52baa25d2e9b0d0da546fcf909fc16b4"
 		}
 	]
 }
