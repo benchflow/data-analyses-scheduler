@@ -5,14 +5,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"github.com/Shopify/sarama"
-	"github.com/wvanbergen/kafka/consumergroup"
 	"gopkg.in/yaml.v2"
 	"os/exec"
 	"os"
-	"os/signal"
 	"sync"
 	"strings"
-	"time"
 )
 
 var trialCount map[string] int
@@ -20,7 +17,6 @@ var trialCount map[string] int
 var c Configuration
 var kafkaIp string
 var kafkaPort string
-var kafkaGroup string
 var sparkMaster string
 var sparkHome string
 var cassandraHost string
@@ -105,7 +101,6 @@ func constructAnalyserSubmitCommand(ss SparkSubmit) exec.Cmd {
 	return *cmd
 	}
 
-/*
 func kafkaConsumer(name string) sarama.PartitionConsumer {
 	config := sarama.NewConfig()
 	consumer, err := sarama.NewConsumer([]string{kafkaIp+":"+kafkaPort}, config)
@@ -118,28 +113,10 @@ func kafkaConsumer(name string) sarama.PartitionConsumer {
 		}
 	return partConsumer
 }
-*/
-
-func kafkaConsumer(name string) consumergroup.ConsumerGroup {
-	config := consumergroup.NewConfig()
-	config.ClientID = "benchflow"
-	config.Offsets.Initial = sarama.OffsetNewest
-	config.Offsets.ProcessingTimeout = 10 * time.Second
-	consumer, _ := consumergroup.JoinConsumerGroup(kafkaGroup, []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
-	return *consumer
-	}
 
 func consumeFromTopic(t TransformerSetting) {
 	go func() {
 		consumer := kafkaConsumer(t.Topic)
-		cInterruption := make(chan os.Signal, 1)
-		signal.Notify(cInterruption, os.Interrupt)
-		go func() {
-			<-cInterruption
-			if err := consumer.Close(); err != nil {
-				sarama.Logger.Println("Error closing the consumer", err)
-			}
-		}()
 		mc := consumer.Messages()
 		fmt.Println("Consuming on topic " + t.Topic)
 		for true {
@@ -178,10 +155,8 @@ func consumeFromTopic(t TransformerSetting) {
 					fmt.Println("Script "+s.Script+" processed")
 					launchAnalyserScript(msg.Trial_id, msg.Total_trials_num, t.Topic)
 					}
-				consumer.CommitUpto(m)
 			}
-		consumer.Close()
-		waitGroup.Done()
+			waitGroup.Done()
 		}()
 }
 
@@ -229,7 +204,6 @@ func launchAnalyserScript(trialID string, totalTrials int, req string) {
 func main() {
 	kafkaIp = os.Getenv("KAFKA_IP")
 	kafkaPort = os.Getenv("KAFKA_PORT")
-	kafkaGroup = os.Getenv("KAFKA_GROUP")
 	sparkMaster = os.Getenv("SPARK_MASTER")
 	sparkHome = os.Getenv("SPARK_HOME")
 	cassandraHost = os.Getenv("CASSANDRA_IP")

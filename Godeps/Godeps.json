@@ -36,10 +36,6 @@
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "f7716cbe52baa25d2e9b0d0da546fcf909fc16b4"
-		},
-		{
-			"ImportPath": "github.com/wvanbergen/kafka/consumergroup",
-			"Rev": "1a8639a45164fcc245d5c7b4bd3ccfbd1a0ffbf3"
 		}
 	]
 }
