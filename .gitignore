@@ -1,4 +1,7 @@
 bin/
+src/Github.com/
+src/gopkg.in
+pkg/
 Godeps/_workspace/pkg/
 
 benchflow_make
