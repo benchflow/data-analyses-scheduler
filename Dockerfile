@@ -14,6 +14,8 @@ ENV PLUGINS_VERSION v-dev
 
 # TODO: remove python, when Spark will be used outside of the container
 RUN apk --update add curl tar python && \
+    # Installing python scientific libraries
+    sudo apt-get install python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose && \
 	# Get spark-tasks-sender
     wget -q --no-check-certificate -O /app/spark-tasks-sender https://github.com/benchflow/spark-tasks-sender/releases/download/$SPARK_TASKS_SENDER_VERSION/spark-tasks-sender && \
     chmod +x /app/spark-tasks-sender && \
