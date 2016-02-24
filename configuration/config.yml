@@ -15,5 +15,8 @@ analysers_settings:
     - requirements: "stats"
       scripts: 
         - script_trial: "/app/analysers/trials/ram.py"
-          script_experiment: ""
+          script_experiment: "/app/analysers/experiments/ram.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
+        - script_trial: "/app/analysers/trials/cpu.py"
+          script_experiment: "/app/analysers/experiments/cpu.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.2"

@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"sync"
 	"strings"
+	"strconv"
 	"time"
 )
 
@@ -64,7 +65,7 @@ type KafkaMessage struct {
 	Minio_key string `json:"minio_key"`
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
-	Total_trials_num int `json:"total_trials_num"`
+	Total_trials_num string `json:"total_trials_num"`
 	}
 
 func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
@@ -124,7 +125,10 @@ func kafkaConsumer(name string) consumergroup.ConsumerGroup {
 	config.ClientID = "benchflow"
 	config.Offsets.Initial = sarama.OffsetNewest
 	config.Offsets.ProcessingTimeout = 10 * time.Second
-	consumer, _ := consumergroup.JoinConsumerGroup(name+"SparkTasksSenderGroup", []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
+	consumer, err := consumergroup.JoinConsumerGroup(name+"SparkTasksSenderGroup", []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
+	if err != nil {
+		panic("Could not connect to kafka")
+		}
 	return *consumer
 	}
 
@@ -144,6 +148,7 @@ func consumeFromTopic(t TransformerSetting) {
 		for true {
 			m := <- mc
 			var msg KafkaMessage
+			fmt.Println(string(m.Value))
 			err := json.Unmarshal(m.Value, &msg)
 			if err != nil {
 				panic(err)
@@ -175,7 +180,8 @@ func consumeFromTopic(t TransformerSetting) {
 						panic(err)
 						}
 					fmt.Println("Script "+s.Script+" processed")
-					launchAnalyserScript(msg.Trial_id, msg.Total_trials_num, t.Topic)
+					totalTrialsNum, _ := strconv.Atoi(msg.Total_trials_num)
+					launchAnalyserScripts(msg.Trial_id, totalTrialsNum, t.Topic)
 					}
 				consumer.CommitUpto(m)
 			}
@@ -184,44 +190,64 @@ func consumeFromTopic(t TransformerSetting) {
 		}()
 }
 
-func launchAnalyserScript(trialID string, totalTrials int, req string) {
+func launchAnalyserScripts(trialID string, totalTrials int, req string) {
 	var scripts []AnalyserScript
 	for _, s := range c.AnalysersSettings {
 		if s.Requirements == req {
 				scripts = s.Scripts
+				break
 			}
 		}
 	for _, s := range scripts {
-		var args []string
-		args = append(args, "--master", "local[*]")
-		args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
-		args = append(args, s.TrialScript)
-		args = append(args, "local[*]")
-		args = append(args, os.Getenv("CASSANDRA_IP"))
-		args = append(args, trialID)
-		fmt.Println(args)
-		cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
-		cmd.Stdout = os.Stdout
-    	cmd.Stderr = os.Stderr
-		err := cmd.Start()
-		cmd.Wait()
-		if err != nil {
-			panic(err)
-			}
-		fmt.Println("Script "+s.TrialScript+" processed")
-		expID := strings.Split(trialID, "_")[0]
-		mutex.Lock()
-		_, present := trialCount[expID]
-		if(present) {
-			trialCount[expID] += 1
-			} else {
-			trialCount[expID] = 1
-			}
-		if(trialCount[expID] == totalTrials) {
-			// Launch Experiment metric
-			fmt.Printf("All trials for experiment "+expID+" completed")
-			}
-		mutex.Unlock()
+		go func(sc AnalyserScript) {
+			var args []string
+			args = append(args, "--master", "local[*]")
+			args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
+			args = append(args, sc.TrialScript)
+			args = append(args, "local[*]")
+			args = append(args, os.Getenv("CASSANDRA_IP"))
+			args = append(args, trialID)
+			fmt.Println(args)
+			cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+			cmd.Stdout = os.Stdout
+	    	cmd.Stderr = os.Stderr
+			err := cmd.Start()
+			cmd.Wait()
+			if err != nil {
+				panic(err)
+				}
+			fmt.Println("Script "+sc.TrialScript+" processed")
+			expID := strings.Split(trialID, "_")[0]
+			mutex.Lock()
+			_, present := trialCount[expID+":"+sc.TrialScript]
+			if(present) {
+				trialCount[expID+":"+sc.TrialScript] += 1
+				} else {
+				trialCount[expID+":"+sc.TrialScript] = 1
+				}
+			if(trialCount[expID+":"+sc.TrialScript] == totalTrials) {
+				// Launch Experiment metric
+				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+expID+" completed, launching experiment analyser")
+				var argss []string
+				argss = append(argss, "--master", "local[*]")
+				argss = append(argss, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
+				argss = append(argss, sc.ExperimentScript)
+				argss = append(argss, "local[*]")
+				argss = append(argss, os.Getenv("CASSANDRA_IP"))
+				argss = append(argss, trialID)
+				fmt.Println(argss)
+				cmd := exec.Command(sparkHome+"/bin/spark-submit", argss...)
+				cmd.Stdout = os.Stdout
+		    	cmd.Stderr = os.Stderr
+				err := cmd.Start()
+				cmd.Wait()
+				if err != nil {
+					panic(err)
+					}
+				fmt.Println("Script "+sc.TrialScript+" processed")
+				}
+			mutex.Unlock()
+			}(s)
 		}
 	}
 
@@ -245,6 +271,7 @@ func main() {
 	fmt.Println(c.AnalysersSettings)
 	
 	waitGroup = sync.WaitGroup{}
+	trialCount = make(map[string] int)
 	
 	for _, sett := range c.TransformersSettings {
 		consumeFromTopic(sett)
