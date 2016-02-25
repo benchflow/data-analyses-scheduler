@@ -6,5 +6,3 @@ settings:
         PROC_INST_ID_: "process_instance_id"
         START_TIME_: "start_time"
         END_TIME_: "end_time"
-      column_transformation: 
-        DURATION_: ""
