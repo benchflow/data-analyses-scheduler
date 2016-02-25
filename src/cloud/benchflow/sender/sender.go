@@ -11,7 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"strings"
+	//"strings"
 	"strconv"
 	"time"
 )
@@ -181,7 +181,7 @@ func consumeFromTopic(t TransformerSetting) {
 						}
 					fmt.Println("Script "+s.Script+" processed")
 					totalTrialsNum, _ := strconv.Atoi(msg.Total_trials_num)
-					launchAnalyserScripts(msg.Trial_id, totalTrialsNum, t.Topic)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, totalTrialsNum, t.Topic)
 					}
 				consumer.CommitUpto(m)
 			}
@@ -190,7 +190,7 @@ func consumeFromTopic(t TransformerSetting) {
 		}()
 }
 
-func launchAnalyserScripts(trialID string, totalTrials int, req string) {
+func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string) {
 	var scripts []AnalyserScript
 	for _, s := range c.AnalysersSettings {
 		if s.Requirements == req {
@@ -217,9 +217,8 @@ func launchAnalyserScripts(trialID string, totalTrials int, req string) {
 				panic(err)
 				}
 			fmt.Println("Script "+sc.TrialScript+" processed")
-			expID := strings.Split(trialID, "_")[0]
 			mutex.Lock()
-			counterId := expID+"_"+sc.TrialScript
+			counterId := experimentID+"_"+sc.TrialScript
 			_, present := trialCount[counterId]
 			if(present) {
 				trialCount[counterId] += 1
@@ -228,7 +227,7 @@ func launchAnalyserScripts(trialID string, totalTrials int, req string) {
 				}
 			if(trialCount[counterId] == totalTrials) {
 				// Launch Experiment metric
-				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+expID+" completed, launching experiment analyser")
+				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
 				var argss []string
 				argss = append(argss, "--master", "local[*]")
 				argss = append(argss, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
