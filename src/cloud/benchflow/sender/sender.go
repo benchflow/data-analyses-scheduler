@@ -5,16 +5,24 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"github.com/Shopify/sarama"
+	"github.com/wvanbergen/kafka/consumergroup"
+	"github.com/streamrail/concurrent-map"
 	"gopkg.in/yaml.v2"
 	"os/exec"
 	"os"
+	"os/signal"
 	"sync"
-	"strings"
+	//"strings"
+	"strconv"
+	"time"
 )
 
-var trialCount map[string] int
+//var trialCount = make(map[string] int)
+var trialCount = cmap.New()
 
 var c Configuration
+var reqScripts = make(map[string] []AnalyserScript)
+
 var kafkaIp string
 var kafkaPort string
 var sparkMaster string
@@ -23,7 +31,7 @@ var cassandraHost string
 var minioHost string
 var waitGroup sync.WaitGroup
 
-var mutex = &sync.Mutex{}
+//var mutex = &sync.Mutex{}
 
 type Configuration struct {
 	TransformersSettings []TransformerSetting `yaml:"transformers_settings"`
@@ -61,7 +69,7 @@ type KafkaMessage struct {
 	Minio_key string `json:"minio_key"`
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
-	Total_trials_num int `json:"total_trials_num"`
+	Total_trials_num string `json:"total_trials_num"`
 	}
 
 func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
@@ -101,6 +109,7 @@ func constructAnalyserSubmitCommand(ss SparkSubmit) exec.Cmd {
 	return *cmd
 	}
 
+/*
 func kafkaConsumer(name string) sarama.PartitionConsumer {
 	config := sarama.NewConfig()
 	consumer, err := sarama.NewConsumer([]string{kafkaIp+":"+kafkaPort}, config)
@@ -113,15 +122,37 @@ func kafkaConsumer(name string) sarama.PartitionConsumer {
 		}
 	return partConsumer
 }
+*/
+
+func kafkaConsumer(name string) consumergroup.ConsumerGroup {
+	config := consumergroup.NewConfig()
+	config.ClientID = "benchflow"
+	config.Offsets.Initial = sarama.OffsetNewest
+	config.Offsets.ProcessingTimeout = 10 * time.Second
+	consumer, err := consumergroup.JoinConsumerGroup(name+"SparkTasksSenderGroup", []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
+	if err != nil {
+		panic("Could not connect to kafka")
+		}
+	return *consumer
+	}
 
 func consumeFromTopic(t TransformerSetting) {
 	go func() {
 		consumer := kafkaConsumer(t.Topic)
+		cInterruption := make(chan os.Signal, 1)
+		signal.Notify(cInterruption, os.Interrupt)
+		go func() {
+			<-cInterruption
+			if err := consumer.Close(); err != nil {
+				sarama.Logger.Println("Error closing the consumer", err)
+			}
+		}()
 		mc := consumer.Messages()
 		fmt.Println("Consuming on topic " + t.Topic)
 		for true {
 			m := <- mc
 			var msg KafkaMessage
+			fmt.Println(string(m.Value))
 			err := json.Unmarshal(m.Value, &msg)
 			if err != nil {
 				panic(err)
@@ -153,51 +184,78 @@ func consumeFromTopic(t TransformerSetting) {
 						panic(err)
 						}
 					fmt.Println("Script "+s.Script+" processed")
-					launchAnalyserScript(msg.Trial_id, msg.Total_trials_num, t.Topic)
+					totalTrialsNum, _ := strconv.Atoi(msg.Total_trials_num)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, totalTrialsNum, t.Topic)
 					}
+				consumer.CommitUpto(m)
 			}
-			waitGroup.Done()
+		consumer.Close()
+		waitGroup.Done()
 		}()
 }
 
-func launchAnalyserScript(trialID string, totalTrials int, req string) {
+func submitAnalyser(script string, trialID string) {
+	var args []string
+	args = append(args, "--master", "local[*]")
+	args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
+	args = append(args, script)
+	args = append(args, "local[*]")
+	args = append(args, os.Getenv("CASSANDRA_IP"))
+	args = append(args, trialID)
+	fmt.Println(args)
+	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	cmd.Wait()
+	if err != nil {
+		panic(err)
+		}
+	fmt.Println("Script "+script+" processed")
+	}
+
+func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string) {
+	/*
 	var scripts []AnalyserScript
 	for _, s := range c.AnalysersSettings {
 		if s.Requirements == req {
 				scripts = s.Scripts
+				break
 			}
 		}
-	for _, s := range scripts {
-		var args []string
-		args = append(args, "--master", "local[*]")
-		args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
-		args = append(args, s.TrialScript)
-		args = append(args, "local[*]")
-		args = append(args, os.Getenv("CASSANDRA_IP"))
-		args = append(args, trialID)
-		fmt.Println(args)
-		cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
-		cmd.Stdout = os.Stdout
-    	cmd.Stderr = os.Stderr
-		err := cmd.Start()
-		cmd.Wait()
-		if err != nil {
-			panic(err)
-			}
-		fmt.Println("Script "+s.TrialScript+" processed")
-		expID := strings.Split(trialID, "_")[0]
-		mutex.Lock()
-		_, present := trialCount[expID]
-		if(present) {
-			trialCount[expID] += 1
-			} else {
-			trialCount[expID] = 1
-			}
-		if(trialCount[expID] == totalTrials) {
-			// Launch Experiment metric
-			fmt.Printf("All trials for experiment "+expID+" completed")
-			}
-		mutex.Unlock()
+	*/
+	for _, s := range reqScripts[req] {
+		go func(sc AnalyserScript) {
+			submitAnalyser(sc.TrialScript, trialID)
+			//mutex.Lock()
+			counterId := experimentID+"_"+sc.TrialScript
+			/*
+			_, present := trialCount[counterId]
+			if(present) {
+				trialCount[counterId] += 1
+				} else {
+				trialCount[counterId] = 1
+				}
+			if(trialCount[counterId] == totalTrials) {
+				// Launch Experiment metric
+				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
+				submitAnalyser(sc.ExperimentScript, trialID)
+				}
+			*/
+			trialCount.SetIfAbsent(counterId, 0)
+			i, ok := trialCount.Get(counterId)
+			if ok {
+				trialCount.Set(counterId, i.(int)+1)
+				}
+			i, ok = trialCount.Get(counterId)
+			if ok && i.(int) == totalTrials {
+				trialCount.Remove(counterId)
+				// Launch Experiment metric
+				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
+				submitAnalyser(sc.ExperimentScript, trialID)
+				}
+			//mutex.Unlock()
+			}(s)
 		}
 	}
 
@@ -219,6 +277,10 @@ func main() {
 			panic(err)
 			}
 	fmt.Println(c.AnalysersSettings)
+	
+	for _, s := range c.AnalysersSettings {
+		reqScripts[s.Requirements] = s.Scripts
+		}
 	
 	waitGroup = sync.WaitGroup{}
 	

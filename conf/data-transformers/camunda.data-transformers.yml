@@ -1,0 +1,8 @@
+settings: 
+    - src_table: "ACT_HI_PROCINST"
+      dest_table: "process"
+      column_mapping: 
+        DURATION_: "duration"
+        PROC_INST_ID_: "process_instance_id"
+        START_TIME_: "start_time"
+        END_TIME_: "end_time"
