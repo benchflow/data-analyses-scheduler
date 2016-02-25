@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var trialCount map[string] int
+var trialCount = make(map[string] int)
 
 var c Configuration
 var kafkaIp string
@@ -271,7 +271,6 @@ func main() {
 	fmt.Println(c.AnalysersSettings)
 	
 	waitGroup = sync.WaitGroup{}
-	trialCount = make(map[string] int)
 	
 	for _, sett := range c.TransformersSettings {
 		consumeFromTopic(sett)
