@@ -7,4 +7,4 @@ settings:
         START_TIME_: "start_time"
         END_TIME_: "end_time"
       column_transformation: 
-        DURATION_: "secondsToMilliseconds"
+        DURATION_: ""
