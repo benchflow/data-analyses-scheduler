@@ -40,6 +40,10 @@
 		{
 			"ImportPath": "github.com/wvanbergen/kafka",
 			"Rev": "1a8639a45164fcc245d5c7b4bd3ccfbd1a0ffbf3"
+		},
+		{
+			"ImportPath": "github.com/streamrail/concurrent-map",
+			"Rev": "b51250d7a7d8215042452e8e0c7a3ce20853865c"
 		}
 	]
 }

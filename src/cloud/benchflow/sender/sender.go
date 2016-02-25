@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"github.com/Shopify/sarama"
 	"github.com/wvanbergen/kafka/consumergroup"
+	"github.com/streamrail/concurrent-map"
 	"gopkg.in/yaml.v2"
 	"os/exec"
 	"os"
@@ -16,7 +17,8 @@ import (
 	"time"
 )
 
-var trialCount = make(map[string] int)
+//var trialCount = make(map[string] int)
+var trialCount = cmap.New()
 
 var c Configuration
 var kafkaIp string
@@ -27,7 +29,7 @@ var cassandraHost string
 var minioHost string
 var waitGroup sync.WaitGroup
 
-var mutex = &sync.Mutex{}
+//var mutex = &sync.Mutex{}
 
 type Configuration struct {
 	TransformersSettings []TransformerSetting `yaml:"transformers_settings"`
@@ -221,8 +223,9 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 	for _, s := range scripts {
 		go func(sc AnalyserScript) {
 			submitAnalyser(sc.TrialScript, trialID)
-			mutex.Lock()
+			//mutex.Lock()
 			counterId := experimentID+"_"+sc.TrialScript
+			/*
 			_, present := trialCount[counterId]
 			if(present) {
 				trialCount[counterId] += 1
@@ -234,7 +237,20 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
 				submitAnalyser(sc.ExperimentScript, trialID)
 				}
-			mutex.Unlock()
+			*/
+			trialCount.SetIfAbsent(counterId, 0)
+			i, ok := trialCount.Get(counterId)
+			if ok {
+				trialCount.Set(counterId, i.(int)+1)
+				}
+			i, ok = trialCount.Get(counterId)
+			if ok && i.(int) == totalTrials {
+				trialCount.Remove(counterId)
+				// Launch Experiment metric
+				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
+				submitAnalyser(sc.ExperimentScript, trialID)
+				}
+			//mutex.Unlock()
 			}(s)
 		}
 	}
