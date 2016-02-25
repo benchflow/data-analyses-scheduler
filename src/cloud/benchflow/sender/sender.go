@@ -21,6 +21,8 @@ import (
 var trialCount = cmap.New()
 
 var c Configuration
+var reqScripts = make(map[string] []AnalyserScript)
+
 var kafkaIp string
 var kafkaPort string
 var sparkMaster string
@@ -213,6 +215,7 @@ func submitAnalyser(script string, trialID string) {
 	}
 
 func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string) {
+	/*
 	var scripts []AnalyserScript
 	for _, s := range c.AnalysersSettings {
 		if s.Requirements == req {
@@ -220,7 +223,8 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 				break
 			}
 		}
-	for _, s := range scripts {
+	*/
+	for _, s := range reqScripts[req] {
 		go func(sc AnalyserScript) {
 			submitAnalyser(sc.TrialScript, trialID)
 			//mutex.Lock()
@@ -273,6 +277,10 @@ func main() {
 			panic(err)
 			}
 	fmt.Println(c.AnalysersSettings)
+	
+	for _, s := range c.AnalysersSettings {
+		reqScripts[s.Requirements] = s.Scripts
+		}
 	
 	waitGroup = sync.WaitGroup{}
 	
