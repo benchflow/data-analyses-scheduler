@@ -219,13 +219,14 @@ func launchAnalyserScripts(trialID string, totalTrials int, req string) {
 			fmt.Println("Script "+sc.TrialScript+" processed")
 			expID := strings.Split(trialID, "_")[0]
 			mutex.Lock()
-			_, present := trialCount[expID+":"+sc.TrialScript]
+			counterId := expID+"_"+sc.TrialScript
+			_, present := trialCount[counterId]
 			if(present) {
-				trialCount[expID+":"+sc.TrialScript] += 1
+				trialCount[counterId] += 1
 				} else {
-				trialCount[expID+":"+sc.TrialScript] = 1
+				trialCount[counterId] = 1
 				}
-			if(trialCount[expID+":"+sc.TrialScript] == totalTrials) {
+			if(trialCount[counterId] == totalTrials) {
 				// Launch Experiment metric
 				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+expID+" completed, launching experiment analyser")
 				var argss []string
