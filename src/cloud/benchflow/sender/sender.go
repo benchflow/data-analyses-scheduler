@@ -190,6 +190,26 @@ func consumeFromTopic(t TransformerSetting) {
 		}()
 }
 
+func submitAnalyser(script string, trialID string) {
+	var args []string
+	args = append(args, "--master", "local[*]")
+	args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
+	args = append(args, script)
+	args = append(args, "local[*]")
+	args = append(args, os.Getenv("CASSANDRA_IP"))
+	args = append(args, trialID)
+	fmt.Println(args)
+	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	cmd.Wait()
+	if err != nil {
+		panic(err)
+		}
+	fmt.Println("Script "+script+" processed")
+	}
+
 func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string) {
 	var scripts []AnalyserScript
 	for _, s := range c.AnalysersSettings {
@@ -200,23 +220,7 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 		}
 	for _, s := range scripts {
 		go func(sc AnalyserScript) {
-			var args []string
-			args = append(args, "--master", "local[*]")
-			args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
-			args = append(args, sc.TrialScript)
-			args = append(args, "local[*]")
-			args = append(args, os.Getenv("CASSANDRA_IP"))
-			args = append(args, trialID)
-			fmt.Println(args)
-			cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
-			cmd.Stdout = os.Stdout
-	    	cmd.Stderr = os.Stderr
-			err := cmd.Start()
-			cmd.Wait()
-			if err != nil {
-				panic(err)
-				}
-			fmt.Println("Script "+sc.TrialScript+" processed")
+			submitAnalyser(sc.TrialScript, trialID)
 			mutex.Lock()
 			counterId := experimentID+"_"+sc.TrialScript
 			_, present := trialCount[counterId]
@@ -228,23 +232,7 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 			if(trialCount[counterId] == totalTrials) {
 				// Launch Experiment metric
 				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
-				var argss []string
-				argss = append(argss, "--master", "local[*]")
-				argss = append(argss, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
-				argss = append(argss, sc.ExperimentScript)
-				argss = append(argss, "local[*]")
-				argss = append(argss, os.Getenv("CASSANDRA_IP"))
-				argss = append(argss, trialID)
-				fmt.Println(argss)
-				cmd := exec.Command(sparkHome+"/bin/spark-submit", argss...)
-				cmd.Stdout = os.Stdout
-		    	cmd.Stderr = os.Stderr
-				err := cmd.Start()
-				cmd.Wait()
-				if err != nil {
-					panic(err)
-					}
-				fmt.Println("Script "+sc.TrialScript+" processed")
+				submitAnalyser(sc.ExperimentScript, trialID)
 				}
 			mutex.Unlock()
 			}(s)
