@@ -58,8 +58,12 @@ COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-se
 COPY ./services/400-clean-tmp-folder.conf /apps/chaperone.d/400-clean-tmp-folder.conf
 
 #TODO: remove, when Spark will be used as a service outside of this container
-# disable the Spark UI when launching scripts (http://stackoverflow.com/questions/33774350/how-to-disable-sparkui-programmatically/33784803#33784803)
+# disables the Spark UI when launching scripts (http://stackoverflow.com/questions/33774350/how-to-disable-sparkui-programmatically/33784803#33784803)
 RUN cp $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf \
     && sed -i -e '$aspark.ui.enabled false' $SPARK_HOME/conf/spark-defaults.conf
+
+# adds Alpine's testing repository and install scripts dependencies (py-numpy, py-scipy)
+RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \
+    && apk --update add py-numpy@testing py-scipy@testing
  
 EXPOSE 8080
