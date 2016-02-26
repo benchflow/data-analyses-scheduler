@@ -14,7 +14,7 @@ ENV PLUGINS_VERSION v-dev
 # ENV CONFIGURATION_FILTER 'config.json'
 
 # TODO: remove python, when Spark will be used outside of the container
-RUN apk --update add curl tar python && \
+RUN apk --update add curl tar python py-yaml && \
 	# Get spark-tasks-sender
     wget -q --no-check-certificate -O /app/spark-tasks-sender https://github.com/benchflow/spark-tasks-sender/releases/download/$SPARK_TASKS_SENDER_VERSION/spark-tasks-sender && \
     chmod +x /app/spark-tasks-sender && \
