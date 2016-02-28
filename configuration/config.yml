@@ -1,15 +1,15 @@
 transformers_settings: 
     - topic: "stats"
       scripts: 
-        - script: "/app/data-transformers/statsTransformer.py"
+        - script: "/app/data-transformers/transformers/statsTransformer.py"
           files: "/app/data-transformers/conf/conf.json"
           py_files: "/app/data-transformers/dataTransformations.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.2"
     - topic: "mysqldump"
       scripts: 
-        - script: "/app/data-transformers/mysqlTransformer.py"
+        - script: "/app/data-transformers/transformers/mysqlTransformer.py"
           files: "/app/data-transformers/conf/conf.json"
-          py_files: "/app/data-transformers/dataTransformations.py"
+          py_files: "/app/data-transformers/transformations/dataTransformations.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.2"
 analysers_settings: 
     - requirements: "stats"
@@ -19,4 +19,18 @@ analysers_settings:
           packages: "TargetHolding:pyspark-cassandra:0.2.2"
         - script_trial: "/app/analysers/trials/cpu.py"
           script_experiment: "/app/analysers/experiments/cpu.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
+    - requirements: "mysqldump"
+      scripts: 
+        - script_trial: "/app/analysers/trials/throughput.py"
+          script_experiment: "/app/analysers/experiments/throughput.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
+        - script_trial: "/app/analysers/trials/processDuration.py"
+          script_experiment: "/app/analysers/experiments/processDuration.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
+        - script_trial: "/app/analysers/trials/dumpSize.py"
+          script_experiment: "/app/analysers/experiments/dumpSize.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
+        - script_trial: "/app/analysers/trials/numberOfProcessInstances.py"
+          script_experiment: "/app/analysers/experiments/numberOfProcessInstances.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.2"
