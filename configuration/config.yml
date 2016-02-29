@@ -3,7 +3,7 @@ transformers_settings:
       scripts: 
         - script: "/app/data-transformers/transformers/statsTransformer.py"
           files: "/app/data-transformers/conf/conf.json"
-          py_files: "/app/data-transformers/dataTransformations.py"
+          py_files: "/app/data-transformers/transformations/dataTransformations.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.2"
     - topic: "mysqldump"
       scripts: 
