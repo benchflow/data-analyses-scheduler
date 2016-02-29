@@ -165,7 +165,7 @@ func consumeFromTopic(t TransformerSetting) {
 						Script(s.Script).
 						//Files(s.Files).
 						//Files("/Users/Gabo/benchflow/spark-tasks-sender/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
-						Files("/app/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
+						Files("/app/data-transformers/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
 						PyFiles(s.PyFiles).
 						FileLocation("runs/"+msg.Minio_key).
 						CassandraHost(cassandraHost).
