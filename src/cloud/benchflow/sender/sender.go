@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"sync"
 	//"strings"
-	"strconv"
 	"time"
 )
 
@@ -69,7 +68,7 @@ type KafkaMessage struct {
 	Minio_key string `json:"minio_key"`
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
-	Total_trials_num string `json:"total_trials_num"`
+	Total_trials_num int `json:"total_trials_num"`
 	}
 
 func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
@@ -184,8 +183,7 @@ func consumeFromTopic(t TransformerSetting) {
 						panic(err)
 						}
 					fmt.Println("Script "+s.Script+" processed")
-					totalTrialsNum, _ := strconv.Atoi(msg.Total_trials_num)
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, totalTrialsNum, t.Topic)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic)
 					}
 				consumer.CommitUpto(m)
 			}
