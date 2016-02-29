@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"sync"
 	//"strings"
-	"strconv"
 	"time"
 )
 
@@ -69,7 +68,7 @@ type KafkaMessage struct {
 	Minio_key string `json:"minio_key"`
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
-	Total_trials_num string `json:"total_trials_num"`
+	Total_trials_num int `json:"total_trials_num"`
 	}
 
 func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
@@ -155,7 +154,8 @@ func consumeFromTopic(t TransformerSetting) {
 			fmt.Println(string(m.Value))
 			err := json.Unmarshal(m.Value, &msg)
 			if err != nil {
-				panic(err)
+				fmt.Println("Received invalid json: " + string(m.Value))
+				continue
 				}
 			fmt.Println(t.Topic+" received: "+msg.Minio_key)
 				for _, s := range t.Scripts {
@@ -164,7 +164,8 @@ func consumeFromTopic(t TransformerSetting) {
 						Packages(s.Packages).
 						Script(s.Script).
 						//Files(s.Files).
-						Files("/app/configuration/data-transformers/"+msg.SUT_name+".data-transformers.yml").
+						//Files("/Users/Gabo/benchflow/spark-tasks-sender/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
+						Files("/app/data-transformers/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
 						PyFiles(s.PyFiles).
 						FileLocation("runs/"+msg.Minio_key).
 						CassandraHost(cassandraHost).
@@ -184,8 +185,7 @@ func consumeFromTopic(t TransformerSetting) {
 						panic(err)
 						}
 					fmt.Println("Script "+s.Script+" processed")
-					totalTrialsNum, _ := strconv.Atoi(msg.Total_trials_num)
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, totalTrialsNum, t.Topic)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, msg.Minio_key)
 					}
 				consumer.CommitUpto(m)
 			}
@@ -194,7 +194,7 @@ func consumeFromTopic(t TransformerSetting) {
 		}()
 }
 
-func submitAnalyser(script string, trialID string) {
+func submitAnalyser(script string, trialID string, minioKey string) {
 	var args []string
 	args = append(args, "--master", "local[*]")
 	args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
@@ -202,6 +202,7 @@ func submitAnalyser(script string, trialID string) {
 	args = append(args, "local[*]")
 	args = append(args, os.Getenv("CASSANDRA_IP"))
 	args = append(args, trialID)
+	args = append(args, minioKey)
 	fmt.Println(args)
 	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
 	cmd.Stdout = os.Stdout
@@ -214,7 +215,7 @@ func submitAnalyser(script string, trialID string) {
 	fmt.Println("Script "+script+" processed")
 	}
 
-func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string) {
+func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string, minioKey string) {
 	/*
 	var scripts []AnalyserScript
 	for _, s := range c.AnalysersSettings {
@@ -226,7 +227,7 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 	*/
 	for _, s := range reqScripts[req] {
 		go func(sc AnalyserScript) {
-			submitAnalyser(sc.TrialScript, trialID)
+			submitAnalyser(sc.TrialScript, trialID, minioKey)
 			//mutex.Lock()
 			counterId := experimentID+"_"+sc.TrialScript
 			/*
@@ -252,7 +253,7 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 				trialCount.Remove(counterId)
 				// Launch Experiment metric
 				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
-				submitAnalyser(sc.ExperimentScript, trialID)
+				submitAnalyser(sc.ExperimentScript, trialID, minioKey)
 				}
 			//mutex.Unlock()
 			}(s)
