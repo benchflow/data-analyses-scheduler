@@ -225,8 +225,8 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 			}
 		}
 	*/
-	for _, s := range reqScripts[req] {
-		go func(sc AnalyserScript) {
+	for _, sc := range reqScripts[req] {
+		//go func(sc AnalyserScript) {
 			submitAnalyser(sc.TrialScript, trialID, minioKey)
 			//mutex.Lock()
 			counterId := experimentID+"_"+sc.TrialScript
@@ -256,7 +256,7 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 				submitAnalyser(sc.ExperimentScript, trialID, minioKey)
 				}
 			//mutex.Unlock()
-			}(s)
+			//}(s)
 		}
 	}
 
