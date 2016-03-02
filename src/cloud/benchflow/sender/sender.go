@@ -31,6 +31,8 @@ var cassandraHost string
 var minioHost string
 var waitGroup sync.WaitGroup
 
+var pysparkCassandraVersion = "0.2.7"
+
 //var mutex = &sync.Mutex{}
 
 type Configuration struct {
@@ -72,11 +74,11 @@ type KafkaMessage struct {
 	Total_trials_num int `json:"total_trials_num"`
 	}
 
-func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
+func constructTransformerSubmitArguments(ss SparkSubmit) []string {
 	var args []string
-	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-0.2.7.jar")
-	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-0.2.7.jar")
-	args = append(args, "--py-files", ss.PyFiles+","+sparkHome+"/pyspark-cassandra-assembly-0.2.7.jar")
+	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--py-files", ss.PyFiles+","+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
 	args = append(args, "--files", ss.Files)
 	args = append(args, "--master", ss.SparkMaster)
 	//args = append(args, "--packages", ss.Packages)
@@ -91,8 +93,7 @@ func constructTransformerSubmitCommand(ss SparkSubmit) exec.Cmd {
 	args = append(args, ss.SUTName)
 	args = append(args, ss.ContainerID)
 	fmt.Println(args)
-	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
-	return *cmd
+	return args
 	}
 
 /*
@@ -169,8 +170,8 @@ func consumeFromTopic(t TransformerSetting) {
 						Packages(s.Packages).
 						Script(s.Script).
 						//Files(s.Files).
-						Files("/Users/Gabo/benchflow/spark-tasks-sender/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
-						//Files("/app/data-transformers/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
+						//Files("/Users/Gabo/benchflow/spark-tasks-sender/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
+						Files("/app/data-transformers/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
 						PyFiles(s.PyFiles).
 						FileLocation("runs/"+msg.Minio_key).
 						CassandraHost(cassandraHost).
@@ -181,32 +182,8 @@ func consumeFromTopic(t TransformerSetting) {
 						ContainerID("00cc9619-66a1-9e11-e594-91c8e0eb1859").
 						SparkMaster(sparkMaster).
 						Build()
-					cmd := constructTransformerSubmitCommand(ss)
-					retries := 0
-					for true {
-						if retries == 3 {
-							fmt.Println("Max number of retries reached for " + s.Script)
-							break
-							}
-						retries += 1
-						//cmd.Stdout = os.Stdout
-						//cmd.Stderr = os.Stderr
-						errOutput := &bytes.Buffer{}
-						cmd.Stderr = errOutput
-						err := cmd.Start()
-						cmd.Wait()
-						if err != nil {
-							panic(err)
-							}
-						errLog := errOutput.String()
-						if checkForErrors(errLog) {
-							fmt.Println("Script " + s.Script + " failed, retrying...")
-							fmt.Println(errLog)
-							continue
-						}
-						fmt.Println("Script "+s.Script+" processed")
-						break
-					}
+					args := constructTransformerSubmitArguments(ss)
+					submitScript(args, s.Script)
 					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, msg.Minio_key)
 					}
 				consumer.CommitUpto(m)
@@ -218,9 +195,9 @@ func consumeFromTopic(t TransformerSetting) {
 
 func submitAnalyser(script string, trialID string, minioKey string) {
 	var args []string
-	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-0.2.7.jar")
-	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-0.2.7.jar")
-	args = append(args, "--py-files", sparkHome+"/pyspark-cassandra-assembly-0.2.7.jar")
+	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--py-files", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
 	args = append(args, "--master", "local[*]")
 	//args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
 	args = append(args, script)
@@ -229,32 +206,7 @@ func submitAnalyser(script string, trialID string, minioKey string) {
 	args = append(args, trialID)
 	args = append(args, minioKey)
 	fmt.Println(args)
-	retries := 0
-	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
-	for true {
-		if retries == 3 {
-			fmt.Println("Max number of retries reached for " + script)
-			break
-			}
-		retries += 1
-		//cmd.Stdout = os.Stdout
-		//cmd.Stderr = os.Stderr
-		errOutput := &bytes.Buffer{}
-		cmd.Stderr = errOutput
-		err := cmd.Start()
-		cmd.Wait()
-		if err != nil {
-			panic(err)
-			}
-		errLog := errOutput.String()
-		if checkForErrors(errLog) {
-			fmt.Println("Script " + script + " failed")
-			fmt.Println(errLog)
-			continue
-		}
-		fmt.Println("Script "+script+" processed")
-		break
-	}
+	submitScript(args, script)
 	}
 
 func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string, minioKey string) {
@@ -299,6 +251,34 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 				}
 			//mutex.Unlock()
 			}(sc)
+		}
+	}
+
+func submitScript(args []string, script string) {
+	retries := 0
+	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+	for retries < 3 {
+		retries += 1
+		//cmd.Stdout = os.Stdout
+		//cmd.Stderr = os.Stderr
+		errOutput := &bytes.Buffer{}
+		cmd.Stderr = errOutput
+		err := cmd.Start()
+		cmd.Wait()
+		if err != nil {
+			panic(err)
+			}
+		errLog := errOutput.String()
+		if checkForErrors(errLog) {
+			fmt.Println("Script " + script + " failed")
+			fmt.Println(errLog)
+			continue
+		}
+		fmt.Println("Script "+script+" processed")
+		break
+	}
+	if retries == 3 {
+		fmt.Println("Max number of retries reached for " + script)
 		}
 	}
 
