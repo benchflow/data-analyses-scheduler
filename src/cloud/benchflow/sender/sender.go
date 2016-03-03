@@ -164,8 +164,10 @@ func consumeFromTopic(t TransformerSetting) {
 				continue
 				}
 			fmt.Println(t.Topic+" received: "+msg.Minio_key)
+			minioKeys := strings.Split(msg.Minio_key, ",")
+			for _, k := range minioKeys {
 				for _, s := range t.Scripts {
-					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+msg.Minio_key+", trial id: "+msg.Trial_id)
+					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+k+", trial id: "+msg.Trial_id)
 					ss := SparkCommandBuilder.
 						Packages(s.Packages).
 						Script(s.Script).
@@ -173,7 +175,7 @@ func consumeFromTopic(t TransformerSetting) {
 						//Files("/Users/Gabo/benchflow/spark-tasks-sender/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
 						Files("/app/data-transformers/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
 						PyFiles(s.PyFiles).
-						FileLocation("runs/"+msg.Minio_key).
+						FileLocation("runs/"+k).
 						CassandraHost(cassandraHost).
 						MinioHost(minioHost).
 						TrialID(msg.Trial_id).
@@ -184,9 +186,10 @@ func consumeFromTopic(t TransformerSetting) {
 						Build()
 					args := constructTransformerSubmitArguments(ss)
 					submitScript(args, s.Script)
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, msg.Minio_key)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, k)
 					}
-				consumer.CommitUpto(m)
+				}
+			consumer.CommitUpto(m)
 			}
 		consumer.Close()
 		waitGroup.Done()
