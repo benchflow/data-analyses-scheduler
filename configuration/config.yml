@@ -31,3 +31,6 @@ analysers_settings:
         - script_trial: "/app/analysers/trials/numberOfProcessInstances.py"
           script_experiment: "/app/analysers/experiments/numberOfProcessInstances.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.2"
+        - script_trial: "/app/analysers/trials/databaseSize.py"
+          script_experiment: "/app/analysers/experiments/databaseSize.py"
+          packages: "TargetHolding:pyspark-cassandra:0.2.2"
