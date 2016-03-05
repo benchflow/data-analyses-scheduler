@@ -20,8 +20,8 @@ analysers_settings:
         - script_trial: "/app/analysers/trials/cpu.py"
           script_experiment: "/app/analysers/experiments/cpu.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.7"
-        - script_trial: "/app/analysers/trials/io.py"
-          script_experiment: "/app/analysers/experiments/io.py"
+        - script_trial: "/app/analysers/trials/IO.py"
+          script_experiment: "/app/analysers/experiments/IO.py"
           packages: "TargetHolding:pyspark-cassandra:0.2.7"
     - requirements: "mysql"
       scripts: 
