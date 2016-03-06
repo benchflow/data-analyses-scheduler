@@ -72,6 +72,7 @@ type KafkaMessage struct {
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
 	Total_trials_num int `json:"total_trials_num"`
+	Collector_name string `json:"collector_name"`
 	}
 
 func constructTransformerSubmitArguments(ss SparkSubmit) []string {
@@ -190,7 +191,7 @@ func consumeFromTopic(t TransformerSetting) {
 					containerID := keyPortions[len(keyPortions)-1]
 					containerID = strings.Split(containerID, "_")[0]
 					//fmt.Println(containerID)
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, containerID)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, containerID, msg.Collector_name)
 					}
 				}
 			consumer.CommitUpto(m)
@@ -216,7 +217,7 @@ func submitAnalyser(script string, trialID string, containerID string) {
 	submitScript(args, script)
 	}
 
-func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string, containerID string) {
+func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string, containerID string, collectorName string) {
 	/*
 	var scripts []AnalyserScript
 	for _, s := range c.AnalysersSettings {
@@ -230,7 +231,7 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 		go func(sc AnalyserScript) {
 			submitAnalyser(sc.TrialScript, trialID, containerID)
 			//mutex.Lock()
-			counterId := experimentID+"_"+sc.TrialScript
+			counterId := experimentID+"_"+sc.TrialScript+"_"+collectorName
 			/*
 			_, present := trialCount[counterId]
 			if(present) {
