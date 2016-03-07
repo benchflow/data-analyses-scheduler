@@ -6,3 +6,6 @@ settings:
         PROC_INST_ID_: "process_instance_id"
         START_TIME_: "start_time"
         END_TIME_: "end_time"
+        PROC_DEF_ID_: "process_definition_id"
+        PROC_INST_ID_: "source_process_instance_id"
+limit_process_string_id: "mock"
