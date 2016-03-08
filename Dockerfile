@@ -14,7 +14,7 @@ ENV PLUGINS_VERSION v-dev
 # ENV CONFIGURATION_FILTER 'config.json'
 
 # TODO: remove python, when Spark will be used outside of the container
-RUN apk --update add curl tar python py-yaml && \
+RUN apk --update add curl tar python && \
 	# Get spark-tasks-sender
     wget -q --no-check-certificate -O /app/spark-tasks-sender https://github.com/benchflow/spark-tasks-sender/releases/download/$SPARK_TASKS_SENDER_VERSION/spark-tasks-sender && \
     chmod +x /app/spark-tasks-sender && \
@@ -61,8 +61,15 @@ COPY ./services/400-clean-tmp-folder.conf /apps/chaperone.d/400-clean-tmp-folder
 RUN cp $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf \
     && sed -i -e '$aspark.ui.enabled false' $SPARK_HOME/conf/spark-defaults.conf
 
-# adds Alpine's testing repository and install scripts dependencies (py-numpy, py-scipy)
+# adds Alpine's testing repository and install scripts dependencies (py-numpy, py-scipy, py-yaml)
 RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \
-    && apk --update add py-numpy@testing py-scipy@testing
+    && apk --update add py-numpy@testing py-scipy@testing py-yaml
+
+# adds pip and install scripts dependencies (future)
+RUN apk --update add py-pip \
+    && pip install --upgrade pip \
+    && pip install future \
+    && apk del --purge py-pip \
+    && rm -rf /var/cache/apk/*
  
 EXPOSE 8080
