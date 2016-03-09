@@ -133,7 +133,7 @@ func kafkaConsumer(name string) sarama.PartitionConsumer {
 func kafkaConsumer(name string) consumergroup.ConsumerGroup {
 	config := consumergroup.NewConfig()
 	config.ClientID = "benchflow"
-	config.Offsets.Initial = sarama.OffsetNewest
+	config.Offsets.Initial = sarama.OffsetOldest
 	config.Offsets.ProcessingTimeout = 10 * time.Second
 	consumer, err := consumergroup.JoinConsumerGroup(name+"SparkTasksSenderGroup", []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
 	if err != nil {
