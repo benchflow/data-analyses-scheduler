@@ -267,7 +267,7 @@ func submitScript(args []string, script string) {
 	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
 	for retries < 3 {
 		retries += 1
-		//cmd.Stdout = os.Stdout
+		cmd.Stdout = os.Stdout
 		//cmd.Stderr = os.Stderr
 		errOutput := &bytes.Buffer{}
 		cmd.Stderr = errOutput
@@ -277,6 +277,7 @@ func submitScript(args []string, script string) {
 			panic(err)
 			}
 		errLog := errOutput.String()
+		fmt.Println(errLog)
 		if checkForErrors(errLog) {
 			fmt.Println("Script " + script + " failed")
 			fmt.Println(errLog)
