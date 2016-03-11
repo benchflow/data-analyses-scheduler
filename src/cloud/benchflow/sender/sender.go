@@ -181,15 +181,15 @@ func consumeFromTopic(t TransformerSetting) {
 						MinioHost(minioHost).
 						TrialID(msg.Trial_id).
 						SUTName(msg.SUT_name).
-						// TODO: Retrieve real container ID
-						ContainerID("00cc9619-66a1-9e11-e594-91c8e0eb1859").
+						ContainerID(msg.Collector_name).
 						SparkMaster(sparkMaster).
 						Build()
 					args := constructTransformerSubmitArguments(ss)
 					submitScript(args, s.Script)
-					keyPortions := strings.Split(k, "/")
-					containerID := keyPortions[len(keyPortions)-1]
-					containerID = strings.Split(containerID, "_")[0]
+					//keyPortions := strings.Split(k, "/")
+					//containerID := keyPortions[len(keyPortions)-1]
+					//containerID = strings.Split(containerID, "_")[0]
+					containerID := msg.Collector_name
 					//fmt.Println(containerID)
 					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, containerID, msg.Collector_name)
 					}
