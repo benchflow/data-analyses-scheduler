@@ -292,7 +292,11 @@ func submitScript(args []string, script string) {
 	}
 
 func checkForErrors(errLog string) bool {
-	if strings.Contains(errLog, "java.lang.RuntimeException") {
+	errString := strings.ToLower(errLog)
+	if strings.Contains(errString, "error") {
+		return true
+		}
+	if strings.Contains(errString, "exception") {
 		return true
 		}
 	return false
