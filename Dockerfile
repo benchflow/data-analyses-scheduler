@@ -4,6 +4,7 @@ MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
 
 ENV SPARK_HOME /usr/spark
 ENV SPARK_VERSION 1.5.1
+ENV PYSPARK_PYTHON python2.7
 ENV HADOOP_VERSION 2.6
 ENV SPARK_TASKS_SENDER_VERSION v-dev
 ENV DATA_TRANSFORMERS_VERSION v-dev
@@ -45,6 +46,8 @@ RUN apk --update add curl tar python && \
 COPY ./configuration /app/configuration
 # TODO: Remove this
 COPY ./conf /app/data-transformers/conf
+COPY ./dependencies/pyspark-cassandra-assembly-0.2.7.jar $SPARK_HOME/
+COPY ./configuration/log4j.properties $SPARK_HOME/conf/
 
 COPY ./services/envcp/config.tpl /app/config.tpl
 	
@@ -54,8 +57,19 @@ COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-se
 COPY ./services/400-clean-tmp-folder.conf /apps/chaperone.d/400-clean-tmp-folder.conf
 
 #TODO: remove, when Spark will be used as a service outside of this container
-# disable the Spark UI when launching scripts (http://stackoverflow.com/questions/33774350/how-to-disable-sparkui-programmatically/33784803#33784803)
+# disables the Spark UI when launching scripts (http://stackoverflow.com/questions/33774350/how-to-disable-sparkui-programmatically/33784803#33784803)
 RUN cp $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf \
     && sed -i -e '$aspark.ui.enabled false' $SPARK_HOME/conf/spark-defaults.conf
+
+# adds Alpine's testing repository and install scripts dependencies (py-numpy, py-scipy, py-yaml)
+RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \
+    && apk --update add py-numpy@testing py-scipy@testing py-yaml
+
+# adds pip and install scripts dependencies (future)
+RUN apk --update add py-pip \
+    && pip install --upgrade pip \
+    && pip install future \
+    && apk del --purge py-pip \
+    && rm -rf /var/cache/apk/*
  
 EXPOSE 8080
