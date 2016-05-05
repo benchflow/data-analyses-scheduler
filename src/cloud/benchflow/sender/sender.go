@@ -22,7 +22,10 @@ var mutex sync.Mutex
 
 var c Configuration
 var reqScripts = make(map[string] []AnalyserScript)
-var reqTracker = make(map[string] string)
+var reqTracker = make(map[string] map[string] bool)
+var reqGroupDone = make(map[string] map[string] bool)
+var allRequirements []string
+var allScripts []string
 
 var kafkaIp string
 var kafkaPort string
@@ -32,7 +35,9 @@ var cassandraHost string
 var minioHost string
 var waitGroup sync.WaitGroup
 
-var pysparkCassandraVersion = "0.2.7"
+var pysparkCassandraVersion = "0.3.5"
+var analysersPath = "/Users/Gabo/benchflow/analysers/analysers"
+var transformersPath = "/Users/Gabo/benchflow/data-transformers/data-transformers"
 
 type Configuration struct {
 	TransformersSettings []TransformerSetting `yaml:"transformers_settings"`
@@ -46,10 +51,10 @@ type AnalyserSetting struct {
 
 type TransformerSetting struct {
 	Topic string `yaml:"topic"`
-	Scripts []Script `yaml:"scripts"`
+	Scripts []TransformerScript `yaml:"scripts"`
 }
 
-type Script struct {
+type TransformerScript struct {
 	Script string `yaml:"script"`
 	Files string `yaml:"files"`
 	PyFiles string `yaml:"py_files"`
@@ -57,6 +62,7 @@ type Script struct {
 	}
 
 type AnalyserScript struct {
+	ScriptName string `yaml:"script_name"`
 	TrialScript string `yaml:"script_trial"`
 	ExperimentScript string `yaml:"script_experiment"`
 	Files string `yaml:"files"`
@@ -74,27 +80,26 @@ type KafkaMessage struct {
 	Collector_name string `json:"collector_name"`
 	}
 
-func constructTransformerSubmitArguments(ss SparkSubmit) []string {
+func constructTransformerSubmitArguments(ss SparkSubmit, experimentID string) []string {
 	var args []string
 	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--conf", "spark.cassandra.connection.host="+os.Getenv("CASSANDRA_IP"))
 	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--py-files", ss.PyFiles+","+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--py-files", transformersPath+"/transformations/dataTransformations.py"+","+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
 	args = append(args, "--files", ss.Files)
 	args = append(args, "--master", ss.SparkMaster)
-	//args = append(args, "--packages", ss.Packages)
 	// TODO: Move this in a configuration
 	args = append(args, "--conf", "spark.driver.memory=4g")
 	args = append(args, ss.Script)
-	args = append(args, ss.SparkMaster)
-	args = append(args, ss.CassandraHost)
 	args = append(args, ss.MinioHost)
 	args = append(args, ss.FileLocation)
 	args = append(args, ss.TrialID)
+	args = append(args, experimentID)
 	args = append(args, ss.SUTName)
 	args = append(args, ss.ContainerID)
 	fmt.Println(args)
 	return args
-	}
+}
 
 func kafkaConsumer(name string) consumergroup.ConsumerGroup {
 	config := consumergroup.NewConfig()
@@ -138,9 +143,7 @@ func consumeFromTopic(t TransformerSetting) {
 					ss := SparkCommandBuilder.
 						Packages(s.Packages).
 						Script(s.Script).
-						//Files(s.Files).
-						//Files("/Users/Gabo/benchflow/spark-tasks-sender/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
-						Files("/app/data-transformers/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
+						Files(transformersPath+"/conf/data-transformers/"+msg.SUT_name+".data-transformers.yml").
 						PyFiles(s.PyFiles).
 						FileLocation("runs/"+k).
 						CassandraHost(cassandraHost).
@@ -150,21 +153,11 @@ func consumeFromTopic(t TransformerSetting) {
 						ContainerID(msg.Collector_name).
 						SparkMaster(sparkMaster).
 						Build()
-					args := constructTransformerSubmitArguments(ss)
+					args := constructTransformerSubmitArguments(ss, msg.Experiment_id)
 					submitScript(args, s.Script)
-					//keyPortions := strings.Split(k, "/")
-					//containerID := keyPortions[len(keyPortions)-1]
-					//containerID = strings.Split(containerID, "_")[0]
 					containerID := msg.Collector_name
-					//fmt.Println(containerID)
-					mutex.Lock()
-					if v, ok := reqTracker[msg.Trial_id]; ok {
-						reqTracker[msg.Trial_id] = v+","+t.Topic
-						} else {
-						reqTracker[msg.Trial_id] = t.Topic
-						}
-					mutex.Unlock()
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.Total_trials_num, t.Topic, containerID, msg.Collector_name)
+					meetRequirement(t.Topic, msg.Trial_id, msg.Experiment_id, "trial")
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.SUT_name, msg.Total_trials_num, containerID, msg.Collector_name)
 					}
 				}
 			consumer.CommitUpto(m)
@@ -174,72 +167,101 @@ func consumeFromTopic(t TransformerSetting) {
 		}()
 }
 
-func submitAnalyser(script string, trialID string, experimentID string, containerID string, level string) {
+func submitAnalyser(scriptName string, script string, trialID string, experimentID string, SUTName string, containerID string, level string) {
 	var args []string
 	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
 	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--py-files", "/app/analysers/commons/commons.py,"+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--conf", "spark.cassandra.connection.host="+os.Getenv("CASSANDRA_IP"))
+	args = append(args, "--files", analysersPath+"/conf/analysers/"+SUTName+".analysers.yml")
+	args = append(args, "--py-files", analysersPath+"/commons/commons.py,"+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
 	args = append(args, "--master", "local[*]")
-	//args = append(args, "--packages", "TargetHolding:pyspark-cassandra:0.2.2")
 	args = append(args, script)
-	args = append(args, "local[*]")
-	args = append(args, os.Getenv("CASSANDRA_IP"))
 	args = append(args, trialID)
+	args = append(args, experimentID)
+	args = append(args, SUTName)
 	args = append(args, containerID)
 	fmt.Println(args)
 	success := submitScript(args, script)
 	if success {
-		scriptList := strings.Split(script, "/")
-		scriptName := scriptList[len(scriptList)-1]
-		scriptName = strings.TrimRight(scriptName, ".py")
-		mutex.Lock()
-		if level == "trial" {
-			if v, ok := reqTracker[trialID]; ok {
-				reqTracker[trialID] = v+","+scriptName
-				} else {
-				reqTracker[trialID] = scriptName
-				}
-			}
-		if level == "experiment" {
-			mutex.Lock()
-			if v, ok := reqTracker[experimentID]; ok {
-				reqTracker[experimentID] = v+","+scriptName
-				} else {
-				reqTracker[experimentID] = scriptName
-				}
-			}
-		mutex.Unlock()
+		meetRequirement(scriptName, trialID, experimentID, level)
 	}
 }
 
-func checkRequirements(neededReqsString string, currentReqsString string, req string) bool {
-	reqMet := false
-	reqPresent := false
+func checkRequirements(neededReqsString string, currentReqsString map[string]bool) bool {
+	reqMet := true
 	neededReqs := strings.Split(neededReqsString, ",")
-	currentReqs := strings.Split(currentReqsString, ",")
-	//fmt.Println(currentReqsString)
+	fmt.Println(neededReqsString)
+	fmt.Println(currentReqsString)
 	for _, nr := range neededReqs {
-		reqMet = false
-		for _, cr := range currentReqs {
-			if nr == req {reqPresent = true}
-			if nr == cr {reqMet = true; break}
+		if _, ok := currentReqsString[nr]; !ok {
+			reqMet = false
+			break
 		}
-		if !reqMet {break}
 	}
-	return reqMet && reqPresent
+	return reqMet
 }
 
-func launchAnalyserScripts(trialID string, experimentID string, totalTrials int, req string, containerID string, collectorName string) {
-	mutex.Lock()
+func meetRequirement(req string, trialID string, experimentID string, level string) {
+	if level == "trial" {
+		if _, ok := reqTracker[trialID]; !ok {
+			reqTracker[trialID] = make(map[string]bool)
+		}
+		reqTracker[trialID][req] = true
+		}
+	if level == "experiment" {
+		if _, ok := reqTracker[experimentID]; !ok {
+			reqTracker[experimentID] = make(map[string]bool)
+		}
+		reqTracker[experimentID][req] = true
+		}
+	fmt.Println(reqTracker[trialID])
+	}
+
+func isTrialComplete(trialID string) bool{
+	for _, sc := range allScripts {
+		if _, ok := reqTracker[trialID][sc]; !ok {
+			return false
+			}
+		} 
+	fmt.Println("All scripts for "+trialID+" done")
+	delete(reqTracker, trialID)
+	fmt.Println(reqTracker)
+	return true
+	}
+
+func isExperimentComplete(experimentID string) bool{
+	for _, sc := range allScripts {
+		if _, ok := reqTracker[experimentID][sc]; !ok {
+			return false
+			}
+		} 
+	fmt.Println("All scripts for "+experimentID+" done")
+	delete(reqTracker, experimentID)
+	fmt.Println(reqTracker)
+	return true
+	}
+
+func launchAnalyserScripts(trialID string, experimentID string, SUTName string, totalTrials int, containerID string, collectorName string) {
 	currentReqs := reqTracker[trialID]
-	mutex.Unlock()
 	for r, scripts := range reqScripts {
-		reqMet := checkRequirements(r, currentReqs, req)
-		if reqMet {
+		fmt.Println("Checking for: "+r)
+		groupAlreadyDone := false
+		if _, ok := reqGroupDone[trialID][r]; ok {
+			groupAlreadyDone = true
+		}
+		reqMet := checkRequirements(r, currentReqs)
+		if reqMet && !groupAlreadyDone {
 			fmt.Println("ALL REQUIREMENTS MET FOR: "+r)
+			if _, ok := reqGroupDone[trialID]; !ok {
+				reqGroupDone[trialID] = make(map[string]bool)
+			}
+			reqGroupDone[trialID][r] = true
+			var wg sync.WaitGroup
+			wg.Add(len(scripts))
 			for _, sc := range scripts {
 				go func(sc AnalyserScript) {
-					submitAnalyser(sc.TrialScript, trialID, experimentID, containerID, "trial")
+					defer wg.Done()
+					submitAnalyser(sc.ScriptName, sc.TrialScript, trialID, experimentID, SUTName, containerID, "trial")
 					counterId := experimentID+"_"+sc.TrialScript+"_"+collectorName
 					trialCount.SetIfAbsent(counterId, 0)
 					i, ok := trialCount.Get(counterId)
@@ -251,36 +273,16 @@ func launchAnalyserScripts(trialID string, experimentID string, totalTrials int,
 						trialCount.Remove(counterId)
 						// Launch Experiment metric
 						fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
-						submitAnalyser(sc.ExperimentScript, trialID, experimentID, containerID, "experiment")
+						submitAnalyser(sc.ScriptName, sc.ExperimentScript, trialID, experimentID, SUTName, containerID, "experiment")
 						}
-					scriptList := strings.Split(sc.TrialScript, "/")
-					scriptName := scriptList[len(scriptList)-1]
-					scriptName = strings.TrimRight(scriptName, ".py")
-					launchAnalyserScripts(trialID, experimentID, totalTrials, scriptName, containerID, collectorName)
 					}(sc)
 				}
+			wg.Wait()
+			isExperimentComplete(experimentID)
+			isTrialComplete(trialID)
+			launchAnalyserScripts(trialID, experimentID, SUTName, totalTrials, containerID, collectorName)
 			}
-	}
-	/*
-	for _, sc := range reqScripts[req] {
-		go func(sc AnalyserScript) {
-			submitAnalyser(sc.TrialScript, trialID, containerID)
-			counterId := experimentID+"_"+sc.TrialScript+"_"+collectorName
-			trialCount.SetIfAbsent(counterId, 0)
-			i, ok := trialCount.Get(counterId)
-			if ok {
-				trialCount.Set(counterId, i.(int)+1)
-				}
-			i, ok = trialCount.Get(counterId)
-			if ok && i.(int) == totalTrials {
-				trialCount.Remove(counterId)
-				// Launch Experiment metric
-				fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
-				submitAnalyser(sc.ExperimentScript, trialID, containerID)
-				}
-			}(sc)
 		}
-		*/
 	}
 
 func submitScript(args []string, script string) bool {
@@ -333,7 +335,7 @@ func main() {
 	cassandraHost = os.Getenv("CASSANDRA_IP")
 	minioHost = os.Getenv("MINIO_IP")
 	
-	dat, err := ioutil.ReadFile("configuration/config.yml")
+	dat, err := ioutil.ReadFile("configuration/config2.yml")
     if err != nil {
 			panic(err)
 			}
@@ -346,7 +348,16 @@ func main() {
 	
 	for _, s := range c.AnalysersSettings {
 		reqScripts[s.Requirements] = s.Scripts
+		reqs := strings.Split(s.Requirements, ",")
+		for _, r := range reqs {
+			allRequirements = append(allRequirements, r)
+			}
+		for _, sc := range s.Scripts {
+			allScripts = append(allScripts, sc.ScriptName)
+			}
 		}
+	
+	fmt.Println(allRequirements)
 	
 	waitGroup = sync.WaitGroup{}
 	
