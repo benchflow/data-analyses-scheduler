@@ -76,6 +76,7 @@ type KafkaMessage struct {
 	Minio_key string `json:"minio_key"`
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
+	Container_id string `json:"container_id"`
 	Total_trials_num int `json:"total_trials_num"`
 	Collector_name string `json:"collector_name"`
 	}
@@ -155,7 +156,8 @@ func consumeFromTopic(t TransformerSetting) {
 						Build()
 					args := constructTransformerSubmitArguments(ss, msg.Experiment_id)
 					submitScript(args, s.Script)
-					containerID := msg.Collector_name
+					//containerID := msg.Collector_name
+					containerID := msg.Container_id
 					meetRequirement(t.Topic, msg.Trial_id, msg.Experiment_id, "trial")
 					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.SUT_name, msg.Total_trials_num, containerID, msg.Collector_name)
 					}
