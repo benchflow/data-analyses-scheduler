@@ -1,3 +1,0 @@
-cassandra_keyspace: "benchflow"
-minio_port: "9000"
-alluxio_port: "19998"
