@@ -1,0 +1,2 @@
+cassandra_keyspace: "benchflow"
+initial_processes_cut: 5

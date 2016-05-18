@@ -45,9 +45,10 @@ RUN apk --update add curl tar python && \
 
 COPY ./configuration /app/configuration
 # TODO: Remove this
-COPY ./conf /app/data-transformers/conf
+# COPY ./configuration /app/data-transformers/conf
+# COPY ./configuration /app/analysers/conf
 COPY ./dependencies/pyspark-cassandra-assembly-0.2.7.jar $SPARK_HOME/
-COPY ./configuration/log4j.properties $SPARK_HOME/conf/
+COPY ./log4j.properties $SPARK_HOME/conf/
 
 COPY ./services/envcp/config.tpl /app/config.tpl
 	
