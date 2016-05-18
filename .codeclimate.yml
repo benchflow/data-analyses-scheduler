@@ -17,6 +17,9 @@ ratings:
   paths:
     - "**.go"
     - "**.sh"
+    - "Dockerfile"
+    - "Dockerfile.test"
+    - "Dockerfile.ci"
 
 exclude_paths:
 - "**/Godeps/**"
