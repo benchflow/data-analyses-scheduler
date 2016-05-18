@@ -48,7 +48,7 @@ COPY ./configuration /app/configuration
 # COPY ./configuration /app/data-transformers/conf
 # COPY ./configuration /app/analysers/conf
 COPY ./dependencies/pyspark-cassandra-assembly-0.2.7.jar $SPARK_HOME/
-COPY ./configuration/log4j.properties $SPARK_HOME/conf/
+COPY ./log4j.properties $SPARK_HOME/conf/
 
 COPY ./bin/spark-tasks-sender_linux /app/spark-tasks-sender
 RUN chmod +x /app/spark-tasks-sender

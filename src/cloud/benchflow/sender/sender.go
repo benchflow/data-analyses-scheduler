@@ -53,9 +53,9 @@ var sparkMaster string
 var spark_port string
 var alluxio_port string
 var pysparkCassandraVersion string
-var analysersPath = "/Users/Gabo/benchflow/analysers/analysers"
-var transformersPath = "/Users/Gabo/benchflow/data-transformers/data-transformers"
-var configurationsPath = "/app/configuration"
+var analysersPath string
+var transformersPath string
+var configurationsPath string
 
 // Sync group to prevent the app from terminating as long as consumers are listening on kafka
 var waitGroup sync.WaitGroup
@@ -365,7 +365,7 @@ func checkForErrors(errLog string) bool {
 // Main function, which registers configurations and starts the consumers
 func main() {
 	// Settings for viper
-	viper.SetConfigName("config")
+	viper.SetConfigName("configuration")
 	viper.AddConfigPath("/app/")
 	viper.AddConfigPath("./")
 	viper.AutomaticEnv()
@@ -388,9 +388,10 @@ func main() {
 	pysparkCassandraVersion = viper.GetString("pyspark_cassandra_version")
 	analysersPath = viper.GetString("analysers_path")
 	transformersPath = viper.GetString("transformers_path")
+	configurationsPath = viper.GetString("configurations_path")
 	
 	// Getting dependencies configuration and unmarshaling in defined structures
-	dat, err := ioutil.ReadFile("configuration/config.yml")
+	dat, err := ioutil.ReadFile("configuration/scripts-configuration.yml")
     if err != nil {
 			panic(err)
 			}
