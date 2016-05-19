@@ -5,6 +5,7 @@ MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
 ENV SPARK_HOME /usr/spark
 ENV SPARK_VERSION 1.5.1
 ENV PYSPARK_PYTHON python2.7
+ENV PYSPARK_CASSANDRA_VERSION 0.3.5
 ENV HADOOP_VERSION 2.6
 ENV SPARK_TASKS_SENDER_VERSION v-dev
 ENV DATA_TRANSFORMERS_VERSION v-dev
@@ -47,7 +48,7 @@ COPY ./configuration /app/configuration
 # TODO: Remove this
 # COPY ./configuration /app/data-transformers/conf
 # COPY ./configuration /app/analysers/conf
-COPY ./dependencies/pyspark-cassandra-assembly-0.2.7.jar $SPARK_HOME/
+COPY ./dependencies/pyspark-cassandra-assembly-$PYSPARK_CASSANDRA_VERSION.jar $SPARK_HOME/
 COPY ./log4j.properties $SPARK_HOME/conf/
 
 COPY ./bin/spark-tasks-sender_linux /app/spark-tasks-sender
