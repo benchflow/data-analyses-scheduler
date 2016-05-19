@@ -1,0 +1,33 @@
+transformers_settings: 
+    - topic: "stats"
+      scripts: 
+        - script: "/app/data-transformers/transformers/statsTransformer.py"
+    - topic: "mysql"
+      scripts: 
+        - script: "/app/data-transformers/transformers/mysqlTransformer.py"
+analysers_settings: 
+    - requirements: "stats,mysql"
+      scripts: 
+        - script_name: "ram"
+          script_trial: "/app/analysers/trials/ram.py"
+          script_experiment: "/app/analysers/experiments/ram.py"
+        - script_name: "cpu"
+          script_trial: "/app/analysers/trials/cpu.py"
+          script_experiment: "/app/analysers/experiments/cpu.py"
+        - script_name: "io"
+          script_trial: "/app/analysers/trials/IO.py"
+          script_experiment: "/app/analysers/experiments/IO.py"
+    - requirements: "cpu,io,ram"
+      scripts: 
+        - script_name: "throughput"
+          script_trial: "/app/analysers/trials/throughput.py"
+          script_experiment: "/app/analysers/experiments/throughput.py"
+        - script_name: "process_duration"
+          script_trial: "/app/analysers/trials/processDuration.py"
+          script_experiment: "/app/analysers/experiments/processDuration.py"
+        - script_name: "number_of_process_instances"
+          script_trial: "/app/analysers/trials/numberOfProcessInstances.py"
+          script_experiment: "/app/analysers/experiments/numberOfProcessInstances.py"
+        - script_name: "database_size"
+          script_trial: "/app/analysers/trials/databaseSize.py"
+          script_experiment: "/app/analysers/experiments/databaseSize.py"
