@@ -53,6 +53,9 @@ var minioSecretKey string
 var runsBucket string
 var driverMemory string
 var executorMemory string
+var executorHeartbeatInterval string
+var blockManagerSlaveTimeoutMs string
+var ackWaitTimeout string
 var sparkHome string
 var sparkMaster string
 var sparkPort string
@@ -135,20 +138,27 @@ type AnalyserArguments struct {
     Host_ID string `json:"host_id"`
 	}
 
-// Function that constructs and returns the arguments for a spark-submit command for a transformer script
-func constructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string) []string {
+// Function that constructs and returns the arguments for the Spark configuration
+func constructSparkArguments() []string {
 	var args []string
+	args = append(args, "--master", sparkMaster)
 	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
 	args = append(args, "--driver-memory", driverMemory)
 	args = append(args, "--executor-memory", executorMemory)
-    args = append(args, "--conf", "spark.executor.heartbeatInterval=300000s")
-    args = append(args, "--conf", "spark.storage.blockManagerSlaveTimeoutMs=300000s")
-    args = append(args, "--conf", "spark.core.connection.ack.wait.timeout=300000s")
+    args = append(args, "--conf", "spark.executor.heartbeatInterval="+executorHeartbeatInterval)
+    args = append(args, "--conf", "spark.storage.blockManagerSlaveTimeoutMs="+blockManagerSlaveTimeoutMs)
+    args = append(args, "--conf", "spark.core.connection.ack.wait.timeout="+ackWaitTimeout)
 	args = append(args, "--conf", "spark.cassandra.connection.host="+cassandraHost)
 	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	return args
+}
+
+// Function that constructs and returns the arguments for a spark-submit command for a transformer script
+func constructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string) []string {
+	var args []string
+	args = constructSparkArguments()
 	args = append(args, "--py-files", transformersPath+"/commons/commons.py"+","+transformersPath+"/transformations/dataTransformations.py"+","+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--files", configurationsPath+"/data-transformers/"+"camunda"+".data-transformers.yml")
-	args = append(args, "--master", sparkMaster)
+	args = append(args, "--files", configurationsPath+"/data-transformers/"+SUTName+".data-transformers.yml")
 	args = append(args, s.Script)
 	transformerArguments := TransformerArguments{}
 	transformerArguments.Cassandra_keyspace = cassandraKeyspace
@@ -161,8 +171,8 @@ func constructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 	transformerArguments.Minio_host = minioHost
 	transformerArguments.Minio_port = minioPort
 	transformerArguments.Minio_secret_key = minioSecretKey
-	transformerArguments.SUT_Name = "camunda"
-	transformerArguments.SUT_Version = "1"
+	transformerArguments.SUT_Name = SUTName
+	transformerArguments.SUT_Version = SUTVersion
 	transformerArguments.Trial_ID = msg.Trial_id
 	jsonArg, _ := json.Marshal(transformerArguments)
 	args = append(args, string(jsonArg))
@@ -218,7 +228,7 @@ func consumeFromTopic(t TransformerSetting) {
 					args := constructTransformerSubmitArguments(s, msg, containerID, hostID)
 					submitScript(args, s.Script)
 					meetRequirement(t.Topic, msg.Trial_id, msg.Experiment_id, "trial")
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, "Camunda", 2, containerID, hostID, msg.Collector_name)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, SUTName, numOfTrials, containerID, hostID, msg.Collector_name)
 					}
 				}
 			consumer.CommitUpto(m)
@@ -231,25 +241,17 @@ func consumeFromTopic(t TransformerSetting) {
 // Function that constructs the arguments for a spark-submit comand for an analyser script
 func constructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, containerID string, hostID string) []string {
 	var args []string
-	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--driver-memory", driverMemory)
-	args = append(args, "--executor-memory", executorMemory)
-    args = append(args, "--conf", "spark.executor.heartbeatInterval=300000s")
-    args = append(args, "--conf", "spark.storage.blockManagerSlaveTimeoutMs=300000s")
-    args = append(args, "--conf", "spark.core.connection.ack.wait.timeout=300000s")
-	args = append(args, "--conf", "spark.cassandra.connection.host="+cassandraHost)
+	args = constructSparkArguments()
 	args = append(args, "--files", configurationsPath+"/analysers/"+SUTName+".analysers.yml")
 	args = append(args, "--py-files", analysersPath+"/commons/commons.py,"+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--master", "local[*]")
 	args = append(args, script)
 	analyserArguments := AnalyserArguments{}
 	analyserArguments.Cassandra_keyspace = cassandraKeyspace
 	analyserArguments.Container_ID = containerID
 	analyserArguments.Experiment_ID = experimentID
 	analyserArguments.Host_ID = hostID
-	analyserArguments.SUT_Name = "camunda"
-	analyserArguments.SUT_Version = "1"
+	analyserArguments.SUT_Name = SUTName
+	analyserArguments.SUT_Version = SUTVersion
 	analyserArguments.Trial_ID = trialID
 	jsonArg, _ := json.Marshal(analyserArguments)
 	args = append(args, string(jsonArg))
@@ -433,6 +435,9 @@ func main() {
 	cassandraHost = viper.GetString("cassandra_host")
 	driverMemory = viper.GetString("driver_memory")
 	executorMemory = viper.GetString("executor_memory")
+	executorHeartbeatInterval = viper.GetString("executor_heartbeat_interval")
+	blockManagerSlaveTimeoutMs = viper.GetString("block_manager_slave_timeout_ms")
+	ackWaitTimeout = viper.GetString("ack_wait_timeout")
 	minioHost = viper.GetString("minio_host")
 	minioPort = viper.GetString("minio_port")
 	minioAccessKey = viper.GetString("minio_access_key")
