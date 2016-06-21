@@ -176,7 +176,6 @@ func constructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 	transformerArguments.Trial_ID = msg.Trial_id
 	jsonArg, _ := json.Marshal(transformerArguments)
 	args = append(args, string(jsonArg))
-	fmt.Println(args)
 	return args
 }
 
@@ -210,13 +209,12 @@ func consumeFromTopic(t TransformerSetting) {
 		for true {
 			m := <- mc
 			var msg KafkaMessage
-			fmt.Println(string(m.Value))
+			fmt.Println("Received message: "+string(m.Value))
 			err := json.Unmarshal(m.Value, &msg)
 			if err != nil {
 				fmt.Println("Received invalid json: " + string(m.Value))
 				continue
 				}
-			fmt.Println(t.Topic+" received: "+msg.Minio_key)
 			minioKeys := strings.Split(msg.Minio_key, ",")
 			containerIds := strings.Split(msg.Container_id, ",")
 			hostIds := strings.Split(msg.Host_id, ",")
@@ -255,7 +253,6 @@ func constructAnalyserSubmitArguments(scriptName string, script string, trialID 
 	analyserArguments.Trial_ID = trialID
 	jsonArg, _ := json.Marshal(analyserArguments)
 	args = append(args, string(jsonArg))
-	fmt.Println(args)
 	return args
 	}
 
@@ -272,8 +269,6 @@ func submitAnalyser(scriptName string, script string, trialID string, experiment
 func checkRequirements(neededReqsString string, currentReqsString map[string]bool) bool {
 	reqMet := true
 	neededReqs := strings.Split(neededReqsString, ",")
-	fmt.Println(neededReqsString)
-	fmt.Println(currentReqsString)
 	for _, nr := range neededReqs {
 		if _, ok := currentReqsString[nr]; !ok {
 			reqMet = false
@@ -296,7 +291,6 @@ func meetRequirement(req string, trialID string, experimentID string, level stri
 		}
 		reqTracker[experimentID][req] = true
 		}
-	fmt.Println(reqTracker[trialID])
 	}
 
 // Function that checks if all scripts for a given trial have been concluded
@@ -308,7 +302,6 @@ func isTrialComplete(trialID string) bool{
 		} 
 	fmt.Println("All scripts for "+trialID+" done")
 	delete(reqTracker, trialID)
-	fmt.Println(reqTracker)
 	return true
 	}
 
@@ -321,14 +314,12 @@ func isExperimentComplete(experimentID string) bool{
 		} 
 	fmt.Println("All scripts for "+experimentID+" done")
 	delete(reqTracker, experimentID)
-	fmt.Println(reqTracker)
 	return true
 	}
 
 // Function that checks for requirements and launches the analysers that meet them
 func launchAnalyserScripts(trialID string, experimentID string, SUTName string, totalTrials int, containerID string, hostID string, collectorName string) {
 	for r, scripts := range reqScripts {
-		fmt.Println("Checking for: "+r)
 		groupAlreadyDone := false
 		if _, ok := reqGroupDone[trialID][r]; ok {
 			groupAlreadyDone = true
@@ -336,7 +327,7 @@ func launchAnalyserScripts(trialID string, experimentID string, SUTName string, 
 		currentReqs := reqTracker[trialID]
 		reqMet := checkRequirements(r, currentReqs)
 		if reqMet && !groupAlreadyDone {
-			fmt.Println("ALL REQUIREMENTS MET FOR: "+r)
+			fmt.Println("All requirements met for: "+r)
 			if _, ok := reqGroupDone[trialID]; !ok {
 				reqGroupDone[trialID] = make(map[string]bool)
 			}
@@ -477,9 +468,6 @@ func main() {
 			allScripts = append(allScripts, sc.ScriptName)
 			}
 		}
-	
-	fmt.Println(allRequirements)
-	fmt.Println(reqScripts["stats"])
 	
 	// Starts the wait group
 	waitGroup = sync.WaitGroup{}
