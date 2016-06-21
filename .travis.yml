@@ -2,6 +2,8 @@ sudo: required
 dist: precise
 group: edge
 
+bundler_args: --retry 3
+
 language: go
 go:
   - 1.5.2
