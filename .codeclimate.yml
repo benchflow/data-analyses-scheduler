@@ -1,0 +1,25 @@
+engines:
+  gofmt:
+    enabled: true
+  golint:
+    enabled: true
+    checks:
+      GoLint/Naming/MixedCaps:
+        enabled: false
+  govet:
+    enabled: true
+  markdownlint:
+    enabled: true
+  shellcheck:
+    enabled: true
+
+ratings:
+  paths:
+    - "**.go"
+    - "**.sh"
+    - "Dockerfile"
+    - "Dockerfile.test"
+    - "Dockerfile.ci"
+
+exclude_paths:
+- "**/Godeps/**"
