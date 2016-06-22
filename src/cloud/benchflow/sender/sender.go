@@ -217,12 +217,11 @@ func consumeFromTopic(t TransformerSetting) {
 				}
 			minioKeys := strings.Split(msg.Minio_key, ",")
 			containerIds := strings.Split(msg.Container_id, ",")
-			hostIds := strings.Split(msg.Host_id, ",")
 			for i, k := range minioKeys {
 				for _, s := range t.Scripts {
 					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+k+", trial id: "+msg.Trial_id)
 					containerID := containerIds[i]
-					hostID := hostIds[i]
+					hostID := msg.Host_id
 					args := constructTransformerSubmitArguments(s, msg, containerID, hostID)
 					submitScript(args, s.Script)
 					meetRequirement(t.Topic, msg.Trial_id, msg.Experiment_id, "trial")
