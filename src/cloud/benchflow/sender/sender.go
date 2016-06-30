@@ -7,6 +7,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/wvanbergen/kafka/consumergroup"
 	"github.com/streamrail/concurrent-map"
+	"github.com/minio/minio-go"
 	"gopkg.in/yaml.v2"
 	"os/exec"
 	"os"
@@ -64,9 +65,6 @@ var pysparkCassandraVersion string
 var analysersPath string
 var transformersPath string
 var configurationsPath string
-var numOfTrials int
-var SUTName string
-var SUTVersion string
 
 // Sync group to prevent the app from terminating as long as consumers are listening on kafka
 var waitGroup sync.WaitGroup
@@ -154,7 +152,7 @@ func constructSparkArguments() []string {
 }
 
 // Function that constructs and returns the arguments for a spark-submit command for a transformer script
-func constructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string) []string {
+func constructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string, SUTName string, SUTVersion string) []string {
 	var args []string
 	args = constructSparkArguments()
 	args = append(args, "--py-files", transformersPath+"/commons/commons.py"+","+transformersPath+"/transformations/dataTransformations.py"+","+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
@@ -215,6 +213,7 @@ func consumeFromTopic(t TransformerSetting) {
 				fmt.Println("Received invalid json: " + string(m.Value))
 				continue
 				}
+			numOfTrials, SUTName, SUTVersion := takeBenchmarkConfigFromMinio(msg.Experiment_id)
 			minioKeys := strings.Split(msg.Minio_key, ",")
 			containerIds := strings.Split(msg.Container_id, ",")
 			for i, k := range minioKeys {
@@ -222,10 +221,10 @@ func consumeFromTopic(t TransformerSetting) {
 					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+k+", trial id: "+msg.Trial_id)
 					containerID := containerIds[i]
 					hostID := msg.Host_id
-					args := constructTransformerSubmitArguments(s, msg, containerID, hostID)
+					args := constructTransformerSubmitArguments(s, msg, containerID, hostID, SUTName, SUTVersion)
 					submitScript(args, s.Script)
 					meetRequirement(t.Topic, msg.Trial_id, msg.Experiment_id, "trial")
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, SUTName, numOfTrials, containerID, hostID, msg.Collector_name)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, SUTName, SUTVersion, numOfTrials, containerID, hostID, msg.Collector_name)
 					}
 				}
 			consumer.CommitUpto(m)
@@ -236,7 +235,7 @@ func consumeFromTopic(t TransformerSetting) {
 }
 
 // Function that constructs the arguments for a spark-submit comand for an analyser script
-func constructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, containerID string, hostID string) []string {
+func constructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, SUTVersion string, containerID string, hostID string) []string {
 	var args []string
 	args = constructSparkArguments()
 	args = append(args, "--files", configurationsPath+"/analysers/"+SUTName+".analysers.yml")
@@ -256,8 +255,8 @@ func constructAnalyserSubmitArguments(scriptName string, script string, trialID 
 	}
 
 // Function that submits an analyser script, and meets its requirement if it succeeds
-func submitAnalyser(scriptName string, script string, trialID string, experimentID string, SUTName string, containerID string, hostID string, level string) {
-	args := constructAnalyserSubmitArguments(scriptName, script, trialID, experimentID, SUTName, containerID, hostID)
+func submitAnalyser(scriptName string, script string, trialID string, experimentID string, SUTName string, SUTVersion string, containerID string, hostID string, level string) {
+	args := constructAnalyserSubmitArguments(scriptName, script, trialID, experimentID, SUTName, SUTVersion, containerID, hostID)
 	success := submitScript(args, script)
 	if success {
 		meetRequirement(scriptName, trialID, experimentID, level)
@@ -317,7 +316,7 @@ func isExperimentComplete(experimentID string) bool{
 	}
 
 // Function that checks for requirements and launches the analysers that meet them
-func launchAnalyserScripts(trialID string, experimentID string, SUTName string, totalTrials int, containerID string, hostID string, collectorName string) {
+func launchAnalyserScripts(trialID string, experimentID string, SUTName string, SUTVersion string, totalTrials int, containerID string, hostID string, collectorName string) {
 	for r, scripts := range reqScripts {
 		groupAlreadyDone := false
 		if _, ok := reqGroupDone[trialID][r]; ok {
@@ -336,7 +335,7 @@ func launchAnalyserScripts(trialID string, experimentID string, SUTName string, 
 			for _, sc := range scripts {
 				go func(sc AnalyserScript) {
 					defer wg.Done()
-					submitAnalyser(sc.ScriptName, sc.TrialScript, trialID, experimentID, SUTName, containerID, hostID, "trial")
+					submitAnalyser(sc.ScriptName, sc.TrialScript, trialID, experimentID, SUTName, SUTVersion, containerID, hostID, "trial")
 					counterId := experimentID+"_"+sc.TrialScript+"_"+containerID+"_"+hostID+"_"+collectorName
 					trialCount.SetIfAbsent(counterId, 0)
 					i, ok := trialCount.Get(counterId)
@@ -348,7 +347,7 @@ func launchAnalyserScripts(trialID string, experimentID string, SUTName string, 
 						trialCount.Remove(counterId)
 						// Launch Experiment metric
 						fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
-						submitAnalyser(sc.ScriptName, sc.ExperimentScript, trialID, experimentID, SUTName, containerID, hostID, "experiment")
+						submitAnalyser(sc.ScriptName, sc.ExperimentScript, trialID, experimentID, SUTName, SUTVersion, containerID, hostID, "experiment")
 						}
 					}(sc)
 				}
@@ -358,7 +357,7 @@ func launchAnalyserScripts(trialID string, experimentID string, SUTName string, 
 			if (trialComplete || experimentComplete) {
 				return
 				}
-			launchAnalyserScripts(trialID, experimentID, SUTName, totalTrials, containerID, hostID, collectorName)
+			launchAnalyserScripts(trialID, experimentID, SUTName, SUTVersion, totalTrials, containerID, hostID, collectorName)
 			}
 		}
 	}
@@ -406,6 +405,58 @@ func checkForErrors(errLog string) bool {
 	return false
 	}
 
+func takeBenchmarkConfigFromMinio(experimentID string) (int, string, string) {
+	type SutStruct struct {
+		Name string `yaml:"name"` 
+		Version string `yaml:"version"`
+	}
+	type BenchmarkConfig struct {
+		Trials int `yaml:"trials"`
+		Sut SutStruct `yaml:"sut"`
+	}
+	
+	var benchmarkConfig BenchmarkConfig
+	
+	// Use a secure connection.
+    ssl := false
+	
+    // Initialize minio client object.
+	minioClient, err := minio.New(minioHost+":"+minioPort, minioAccessKey, minioSecretKey, ssl)
+	if err != nil {
+    	panic(err)
+	}
+	
+	// Path of the file
+	path := strings.Replace(experimentID, ".", "/", -1)
+	
+	// Get object info
+	objInfo, err := minioClient.StatObject("benchmarks", path+"/benchflow-benchmark.yml")
+	if err != nil {
+	    panic(err)
+	}
+	
+	// Get object
+	object, err := minioClient.GetObject("benchmarks", path+"/benchflow-benchmark.yml")
+	if err != nil {
+	    panic(err)
+	}
+	dat := make([]byte, objInfo.Size)
+	object.Read(dat)
+    
+    // Unmarshal yaml
+	err = yaml.Unmarshal(dat, &benchmarkConfig)
+	if err != nil {
+		panic(err)
+	}
+	
+	// Return values we need
+	numOfTrials := benchmarkConfig.Trials
+	SUTName := benchmarkConfig.Sut.Name
+	SUTVersion := benchmarkConfig.Sut.Version
+	
+	return numOfTrials, SUTName, SUTVersion
+}
+
 // Main function, which registers configurations and starts the consumers
 func main() {
 	// Settings for viper
@@ -441,20 +492,16 @@ func main() {
 	analysersPath = viper.GetString("analysers_path")
 	transformersPath = viper.GetString("transformers_path")
 	configurationsPath = viper.GetString("configurations_path")
-	// TODO: Take from the right file on Minio
-	numOfTrials = viper.GetInt("num_of_trials")
-	SUTName = viper.GetString("sut_name")
-	SUTVersion = viper.GetString("sut_version")
 	
 	// Getting dependencies configuration and unmarshaling in defined structures
 	dat, err := ioutil.ReadFile("/app/configuration/scripts-configuration.yml")
     if err != nil {
-			panic(err)
-			}
+		panic(err)
+	}
 	err = yaml.Unmarshal(dat, &c)
 	if err != nil {
-			panic(err)
-			}
+		panic(err)
+	}
 	
 	// Mapping the requirements string to the scripts associated with those requirements
 	for _, s := range c.AnalysersSettings {
