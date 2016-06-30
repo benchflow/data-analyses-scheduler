@@ -19,6 +19,5 @@ pyspark_cassandra_version: "0.3.5"
 analysers_path: "/app/analysers"
 transformers_path: "/app/data-transformers"
 configurations_path: "/app/configuration"
-num_of_trials: 3
-sut_name: "Camunda"
-sut_version: "1"
+benchmarks_config_bucket: "benchmarks"
+benchmarks_config_name: "benchflow-benchmark.yml"

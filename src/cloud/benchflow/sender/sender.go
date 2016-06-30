@@ -65,6 +65,8 @@ var pysparkCassandraVersion string
 var analysersPath string
 var transformersPath string
 var configurationsPath string
+var benchmarksConfigBucket string
+var benchmarksConfigName string
 
 // Sync group to prevent the app from terminating as long as consumers are listening on kafka
 var waitGroup sync.WaitGroup
@@ -430,13 +432,13 @@ func takeBenchmarkConfigFromMinio(experimentID string) (int, string, string) {
 	path := strings.Replace(experimentID, ".", "/", -1)
 	
 	// Get object info
-	objInfo, err := minioClient.StatObject("benchmarks", path+"/benchflow-benchmark.yml")
+	objInfo, err := minioClient.StatObject(benchmarksConfigBucket, path+"/"+benchmarksConfigName)
 	if err != nil {
 	    panic(err)
 	}
 	
 	// Get object
-	object, err := minioClient.GetObject("benchmarks", path+"/benchflow-benchmark.yml")
+	object, err := minioClient.GetObject(benchmarksConfigBucket, path+"/"+benchmarksConfigName)
 	if err != nil {
 	    panic(err)
 	}
@@ -492,6 +494,8 @@ func main() {
 	analysersPath = viper.GetString("analysers_path")
 	transformersPath = viper.GetString("transformers_path")
 	configurationsPath = viper.GetString("configurations_path")
+	benchmarksConfigBucket = viper.GetString("benchmarks_config_bucket")
+	benchmarksConfigName = viper.GetString("benchmarks_config_name")
 	
 	// Getting dependencies configuration and unmarshaling in defined structures
 	dat, err := ioutil.ReadFile("/app/configuration/scripts-configuration.yml")
