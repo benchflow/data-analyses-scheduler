@@ -45,6 +45,7 @@ RUN apk del --purge curl tar && \
     rm -rf /var/cache/apk/*
 
 COPY ./configuration /app/configuration
+COPY ./configuration.yml /app/configuration.yml
 # TODO: Remove this
 # COPY ./configuration /app/data-transformers/conf
 # COPY ./configuration /app/analysers/conf
@@ -68,13 +69,16 @@ RUN cp $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defa
 
 # adds Alpine's testing repository and install scripts dependencies (py-numpy, py-scipy, py-yaml)
 RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \
-    && apk --update add py-numpy@testing py-scipy@testing py-yaml
+    && apk --update add py-numpy@testing py-scipy@testing py-yaml py-dateutil
 
 # adds pip and install scripts dependencies (future)
 RUN apk --update add py-pip \
     && pip install --upgrade pip \
     && pip install future \
+    && pip install minio \
     && apk del --purge py-pip \
     && rm -rf /var/cache/apk/*
+    
+CMD /app/spark-tasks-sender
  
 EXPOSE 8080

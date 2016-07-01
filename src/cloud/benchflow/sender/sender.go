@@ -7,6 +7,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/wvanbergen/kafka/consumergroup"
 	"github.com/streamrail/concurrent-map"
+	"github.com/minio/minio-go"
 	"gopkg.in/yaml.v2"
 	"os/exec"
 	"os"
@@ -47,15 +48,25 @@ var kafkaIp string
 var kafkaPort string
 var cassandraHost string
 var minioHost string
-var minio_port string
+var minioPort string
+var minioAccessKey string
+var minioSecretKey string
+var runsBucket string
+var driverMemory string
+var executorMemory string
+var executorHeartbeatInterval string
+var blockManagerSlaveTimeoutMs string
+var ackWaitTimeout string
 var sparkHome string
 var sparkMaster string
-var spark_port string
+var sparkPort string
 var alluxio_port string
 var pysparkCassandraVersion string
 var analysersPath string
 var transformersPath string
 var configurationsPath string
+var benchmarksConfigBucket string
+var benchmarksConfigName string
 
 // Sync group to prevent the app from terminating as long as consumers are listening on kafka
 var waitGroup sync.WaitGroup
@@ -93,33 +104,78 @@ type AnalyserScript struct {
 	}
 
 type KafkaMessage struct {
-	SUT_name string `json:"SUT_name"`
-	SUT_version string `json:"SUT_version"`
 	Minio_key string `json:"minio_key"`
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
 	Container_id string `json:"container_id"`
-	Total_trials_num int `json:"total_trials_num"`
+	Host_id string `json:"host_id"`
 	Collector_name string `json:"collector_name"`
 	}
 
-// Function that constructs and returns the arguments for a spark-submit command for a transformer script
-func constructTransformerSubmitArguments(ss SparkSubmit, experimentID string) []string {
+type TransformerArguments struct {
+	Cassandra_keyspace string `json:"cassandra_keyspace"`
+    Minio_host string `json:"minio_host"`
+    Minio_port string `json:"minio_port"`
+    Minio_access_key string `json:"minio_access_key"`
+    Minio_secret_key string `json:"minio_secret_key"`
+    File_bucket string `json:"file_bucket"`
+    File_path string `json:"file_path"`
+    Trial_ID string `json:"trial_id"`
+    Experiment_ID string `json:"experiment_id"`
+    SUT_Name string `json:"sut_name"`
+    SUT_Version string `json:"sut_version"`
+    Container_ID string `json:"container_id"`
+    Host_ID string `json:"host_id"`
+	}
+
+type AnalyserArguments struct {
+	Cassandra_keyspace string `json:"cassandra_keyspace"`
+    Trial_ID string `json:"trial_id"`
+    Experiment_ID string `json:"experiment_id"`
+    SUT_Name string `json:"sut_name"`
+    SUT_Version string `json:"sut_version"`
+    Container_ID string `json:"container_id"`
+    Host_ID string `json:"host_id"`
+	}
+
+// Function that constructs and returns the arguments for the Spark configuration
+func constructSparkArguments() []string {
 	var args []string
+	args = append(args, "--master", sparkMaster)
 	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--driver-memory", driverMemory)
+	args = append(args, "--executor-memory", executorMemory)
+    args = append(args, "--conf", "spark.executor.heartbeatInterval="+executorHeartbeatInterval)
+    args = append(args, "--conf", "spark.storage.blockManagerSlaveTimeoutMs="+blockManagerSlaveTimeoutMs)
+    args = append(args, "--conf", "spark.core.connection.ack.wait.timeout="+ackWaitTimeout)
 	args = append(args, "--conf", "spark.cassandra.connection.host="+cassandraHost)
 	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--py-files", transformersPath+"/transformations/dataTransformations.py"+","+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--files", ss.Files)
-	args = append(args, "--master", ss.SparkMaster)
-	args = append(args, ss.Script)
-	args = append(args, ss.MinioHost)
-	args = append(args, ss.FileLocation)
-	args = append(args, ss.TrialID)
-	args = append(args, experimentID)
-	args = append(args, ss.SUTName)
-	args = append(args, ss.ContainerID)
-	fmt.Println(args)
+	return args
+}
+
+// Function that constructs and returns the arguments for a spark-submit command for a transformer script
+func constructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string, SUTName string, SUTVersion string) []string {
+	var args []string
+	args = constructSparkArguments()
+	args = append(args, "--py-files", transformersPath+"/commons/commons.py"+","+transformersPath+"/transformations/dataTransformations.py"+","+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
+	args = append(args, "--files", configurationsPath+"/data-transformers/"+SUTName+".data-transformers.yml")
+	args = append(args, s.Script)
+	transformerArguments := TransformerArguments{}
+	transformerArguments.Cassandra_keyspace = cassandraKeyspace
+	transformerArguments.Container_ID = msg.Container_id
+	transformerArguments.Experiment_ID = msg.Experiment_id
+	transformerArguments.File_bucket = runsBucket
+	transformerArguments.File_path = msg.Minio_key
+	transformerArguments.Host_ID = msg.Host_id
+	transformerArguments.Minio_access_key = minioAccessKey
+	transformerArguments.Minio_host = minioHost
+	transformerArguments.Minio_port = minioPort
+	transformerArguments.Minio_secret_key = minioSecretKey
+	transformerArguments.SUT_Name = SUTName
+	transformerArguments.SUT_Version = SUTVersion
+	transformerArguments.Trial_ID = msg.Trial_id
+	jsonArg, _ := json.Marshal(transformerArguments)
+	args = append(args, string(jsonArg))
 	return args
 }
 
@@ -153,35 +209,24 @@ func consumeFromTopic(t TransformerSetting) {
 		for true {
 			m := <- mc
 			var msg KafkaMessage
-			fmt.Println(string(m.Value))
+			fmt.Println("Received message: "+string(m.Value))
 			err := json.Unmarshal(m.Value, &msg)
 			if err != nil {
 				fmt.Println("Received invalid json: " + string(m.Value))
 				continue
 				}
-			fmt.Println(t.Topic+" received: "+msg.Minio_key)
+			numOfTrials, SUTName, SUTVersion := takeBenchmarkConfigFromMinio(msg.Experiment_id)
 			minioKeys := strings.Split(msg.Minio_key, ",")
-			for _, k := range minioKeys {
+			containerIds := strings.Split(msg.Container_id, ",")
+			for i, k := range minioKeys {
 				for _, s := range t.Scripts {
 					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+k+", trial id: "+msg.Trial_id)
-					ss := SparkCommandBuilder.
-						Packages(s.Packages).
-						Script(s.Script).
-						Files(transformersPath+configurationsPath+"/data-transformers/"+msg.SUT_name+".data-transformers.yml").
-						PyFiles(s.PyFiles).
-						FileLocation("runs/"+k).
-						CassandraHost(cassandraHost).
-						MinioHost(minioHost).
-						TrialID(msg.Trial_id).
-						SUTName(msg.SUT_name).
-						ContainerID(msg.Collector_name).
-						SparkMaster(sparkMaster).
-						Build()
-					args := constructTransformerSubmitArguments(ss, msg.Experiment_id)
+					containerID := containerIds[i]
+					hostID := msg.Host_id
+					args := constructTransformerSubmitArguments(s, msg, containerID, hostID, SUTName, SUTVersion)
 					submitScript(args, s.Script)
-					containerID := msg.Container_id
 					meetRequirement(t.Topic, msg.Trial_id, msg.Experiment_id, "trial")
-					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, msg.SUT_name, msg.Total_trials_num, containerID, msg.Collector_name)
+					launchAnalyserScripts(msg.Trial_id, msg.Experiment_id, SUTName, SUTVersion, numOfTrials, containerID, hostID, msg.Collector_name)
 					}
 				}
 			consumer.CommitUpto(m)
@@ -192,25 +237,28 @@ func consumeFromTopic(t TransformerSetting) {
 }
 
 // Function that constructs the arguments for a spark-submit comand for an analyser script
-func constructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, containerID string) []string {
+func constructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, SUTVersion string, containerID string, hostID string) []string {
 	var args []string
-	args = append(args, "--jars", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--driver-class-path", sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--conf", "spark.cassandra.connection.host="+cassandraHost)
+	args = constructSparkArguments()
 	args = append(args, "--files", configurationsPath+"/analysers/"+SUTName+".analysers.yml")
 	args = append(args, "--py-files", analysersPath+"/commons/commons.py,"+sparkHome+"/pyspark-cassandra-assembly-"+pysparkCassandraVersion+".jar")
-	args = append(args, "--master", "local[*]")
 	args = append(args, script)
-	args = append(args, trialID)
-	args = append(args, experimentID)
-	args = append(args, SUTName)
-	args = append(args, containerID)
+	analyserArguments := AnalyserArguments{}
+	analyserArguments.Cassandra_keyspace = cassandraKeyspace
+	analyserArguments.Container_ID = containerID
+	analyserArguments.Experiment_ID = experimentID
+	analyserArguments.Host_ID = hostID
+	analyserArguments.SUT_Name = SUTName
+	analyserArguments.SUT_Version = SUTVersion
+	analyserArguments.Trial_ID = trialID
+	jsonArg, _ := json.Marshal(analyserArguments)
+	args = append(args, string(jsonArg))
 	return args
 	}
 
 // Function that submits an analyser script, and meets its requirement if it succeeds
-func submitAnalyser(scriptName string, script string, trialID string, experimentID string, SUTName string, containerID string, level string) {
-	args := constructAnalyserSubmitArguments(scriptName, script, trialID, experimentID, SUTName, containerID)
+func submitAnalyser(scriptName string, script string, trialID string, experimentID string, SUTName string, SUTVersion string, containerID string, hostID string, level string) {
+	args := constructAnalyserSubmitArguments(scriptName, script, trialID, experimentID, SUTName, SUTVersion, containerID, hostID)
 	success := submitScript(args, script)
 	if success {
 		meetRequirement(scriptName, trialID, experimentID, level)
@@ -221,8 +269,6 @@ func submitAnalyser(scriptName string, script string, trialID string, experiment
 func checkRequirements(neededReqsString string, currentReqsString map[string]bool) bool {
 	reqMet := true
 	neededReqs := strings.Split(neededReqsString, ",")
-	fmt.Println(neededReqsString)
-	fmt.Println(currentReqsString)
 	for _, nr := range neededReqs {
 		if _, ok := currentReqsString[nr]; !ok {
 			reqMet = false
@@ -245,7 +291,6 @@ func meetRequirement(req string, trialID string, experimentID string, level stri
 		}
 		reqTracker[experimentID][req] = true
 		}
-	fmt.Println(reqTracker[trialID])
 	}
 
 // Function that checks if all scripts for a given trial have been concluded
@@ -257,7 +302,6 @@ func isTrialComplete(trialID string) bool{
 		} 
 	fmt.Println("All scripts for "+trialID+" done")
 	delete(reqTracker, trialID)
-	fmt.Println(reqTracker)
 	return true
 	}
 
@@ -270,22 +314,20 @@ func isExperimentComplete(experimentID string) bool{
 		} 
 	fmt.Println("All scripts for "+experimentID+" done")
 	delete(reqTracker, experimentID)
-	fmt.Println(reqTracker)
 	return true
 	}
 
 // Function that checks for requirements and launches the analysers that meet them
-func launchAnalyserScripts(trialID string, experimentID string, SUTName string, totalTrials int, containerID string, collectorName string) {
-	currentReqs := reqTracker[trialID]
+func launchAnalyserScripts(trialID string, experimentID string, SUTName string, SUTVersion string, totalTrials int, containerID string, hostID string, collectorName string) {
 	for r, scripts := range reqScripts {
-		fmt.Println("Checking for: "+r)
 		groupAlreadyDone := false
 		if _, ok := reqGroupDone[trialID][r]; ok {
 			groupAlreadyDone = true
 		}
+		currentReqs := reqTracker[trialID]
 		reqMet := checkRequirements(r, currentReqs)
 		if reqMet && !groupAlreadyDone {
-			fmt.Println("ALL REQUIREMENTS MET FOR: "+r)
+			fmt.Println("All requirements met for: "+r)
 			if _, ok := reqGroupDone[trialID]; !ok {
 				reqGroupDone[trialID] = make(map[string]bool)
 			}
@@ -295,8 +337,8 @@ func launchAnalyserScripts(trialID string, experimentID string, SUTName string, 
 			for _, sc := range scripts {
 				go func(sc AnalyserScript) {
 					defer wg.Done()
-					submitAnalyser(sc.ScriptName, sc.TrialScript, trialID, experimentID, SUTName, containerID, "trial")
-					counterId := experimentID+"_"+sc.TrialScript+"_"+collectorName
+					submitAnalyser(sc.ScriptName, sc.TrialScript, trialID, experimentID, SUTName, SUTVersion, containerID, hostID, "trial")
+					counterId := experimentID+"_"+sc.TrialScript+"_"+containerID+"_"+hostID+"_"+collectorName
 					trialCount.SetIfAbsent(counterId, 0)
 					i, ok := trialCount.Get(counterId)
 					if ok {
@@ -307,14 +349,17 @@ func launchAnalyserScripts(trialID string, experimentID string, SUTName string, 
 						trialCount.Remove(counterId)
 						// Launch Experiment metric
 						fmt.Printf("All trials "+sc.TrialScript+" for experiment "+experimentID+" completed, launching experiment analyser")
-						submitAnalyser(sc.ScriptName, sc.ExperimentScript, trialID, experimentID, SUTName, containerID, "experiment")
+						submitAnalyser(sc.ScriptName, sc.ExperimentScript, trialID, experimentID, SUTName, SUTVersion, containerID, hostID, "experiment")
 						}
 					}(sc)
 				}
 			wg.Wait()
-			isExperimentComplete(experimentID)
-			isTrialComplete(trialID)
-			launchAnalyserScripts(trialID, experimentID, SUTName, totalTrials, containerID, collectorName)
+			trialComplete := isTrialComplete(trialID)
+			experimentComplete := isExperimentComplete(experimentID)
+			if (trialComplete || experimentComplete) {
+				return
+				}
+			launchAnalyserScripts(trialID, experimentID, SUTName, SUTVersion, totalTrials, containerID, hostID, collectorName)
 			}
 		}
 	}
@@ -362,6 +407,58 @@ func checkForErrors(errLog string) bool {
 	return false
 	}
 
+func takeBenchmarkConfigFromMinio(experimentID string) (int, string, string) {
+	type SutStruct struct {
+		Name string `yaml:"name"` 
+		Version string `yaml:"version"`
+	}
+	type BenchmarkConfig struct {
+		Trials int `yaml:"trials"`
+		Sut SutStruct `yaml:"sut"`
+	}
+	
+	var benchmarkConfig BenchmarkConfig
+	
+	// Use a secure connection.
+    ssl := false
+	
+    // Initialize minio client object.
+	minioClient, err := minio.New(minioHost+":"+minioPort, minioAccessKey, minioSecretKey, ssl)
+	if err != nil {
+    	panic(err)
+	}
+	
+	// Path of the file
+	path := strings.Replace(experimentID, ".", "/", -1)
+	
+	// Get object info
+	objInfo, err := minioClient.StatObject(benchmarksConfigBucket, path+"/"+benchmarksConfigName)
+	if err != nil {
+	    panic(err)
+	}
+	
+	// Get object
+	object, err := minioClient.GetObject(benchmarksConfigBucket, path+"/"+benchmarksConfigName)
+	if err != nil {
+	    panic(err)
+	}
+	dat := make([]byte, objInfo.Size)
+	object.Read(dat)
+    
+    // Unmarshal yaml
+	err = yaml.Unmarshal(dat, &benchmarkConfig)
+	if err != nil {
+		panic(err)
+	}
+	
+	// Return values we need
+	numOfTrials := benchmarkConfig.Trials
+	SUTName := benchmarkConfig.Sut.Name
+	SUTVersion := benchmarkConfig.Sut.Version
+	
+	return numOfTrials, SUTName, SUTVersion
+}
+
 // Main function, which registers configurations and starts the consumers
 func main() {
 	// Settings for viper
@@ -379,27 +476,36 @@ func main() {
 	kafkaIp = viper.GetString("kafka_host")
 	kafkaPort = viper.GetString("kafka_port")
 	cassandraHost = viper.GetString("cassandra_host")
+	driverMemory = viper.GetString("driver_memory")
+	executorMemory = viper.GetString("executor_memory")
+	executorHeartbeatInterval = viper.GetString("executor_heartbeat_interval")
+	blockManagerSlaveTimeoutMs = viper.GetString("block_manager_slave_timeout_ms")
+	ackWaitTimeout = viper.GetString("ack_wait_timeout")
 	minioHost = viper.GetString("minio_host")
-	minio_port = viper.GetString("minio_port")
+	minioPort = viper.GetString("minio_port")
+	minioAccessKey = viper.GetString("minio_access_key")
+	minioSecretKey = viper.GetString("minio_secret_key")
+	runsBucket = viper.GetString("runs_bucket")
 	sparkHome = viper.GetString("spark_home")
 	sparkMaster = viper.GetString("spark_master")
-	spark_port = viper.GetString("spark_port")
+	sparkPort = viper.GetString("spark_port")
 	alluxio_port = viper.GetString("alluxio_port")
 	pysparkCassandraVersion = viper.GetString("pyspark_cassandra_version")
 	analysersPath = viper.GetString("analysers_path")
 	transformersPath = viper.GetString("transformers_path")
 	configurationsPath = viper.GetString("configurations_path")
+	benchmarksConfigBucket = viper.GetString("benchmarks_config_bucket")
+	benchmarksConfigName = viper.GetString("benchmarks_config_name")
 	
 	// Getting dependencies configuration and unmarshaling in defined structures
-	dat, err := ioutil.ReadFile("configuration/scripts-configuration.yml")
+	dat, err := ioutil.ReadFile("/app/configuration/scripts-configuration.yml")
     if err != nil {
-			panic(err)
-			}
+		panic(err)
+	}
 	err = yaml.Unmarshal(dat, &c)
 	if err != nil {
-			panic(err)
-			}
-	fmt.Println(c.AnalysersSettings)
+		panic(err)
+	}
 	
 	// Mapping the requirements string to the scripts associated with those requirements
 	for _, s := range c.AnalysersSettings {
@@ -412,8 +518,6 @@ func main() {
 			allScripts = append(allScripts, sc.ScriptName)
 			}
 		}
-	
-	fmt.Println(allRequirements)
 	
 	// Starts the wait group
 	waitGroup = sync.WaitGroup{}

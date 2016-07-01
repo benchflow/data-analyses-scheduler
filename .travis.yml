@@ -16,7 +16,6 @@ branches:
   except:
     - v-dev
 
-
 cache:
   directories:
     - /usr/bin

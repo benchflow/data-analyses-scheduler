@@ -43,11 +43,12 @@ build_container_local:
 test_container_local:
 	docker run -d -p 8080:8080 \
 	-e "ENVCONSUL_CONSUL=$(ENVCONSUL_CONSUL_IP):$(ENVCONSUL_CONSUL_PORT)" \
-	-e "KAFKA_IP=$(KAFKA_IP)" \
-	-e "KAFKA_PORT=$(KAFKA_PORT)" \
+	-e "KAFKA_HOST=zookeeper" \
+	-e "KAFKA_PORT=2181" \
 	-e "SPARK_MASTER=local[*]" \
 	-e "CASSANDRA_IP=$(CASSANDRA_IP)" \
 	-e "MINIO_IP=$(MINIO_IP)" \
+	--link kafkadocker_zookeeper_1:zookeeper --link kafkadocker_kafka_1:kafka \
 	--name $(REPONAME) $(DOCKERIMAGENAME):$(VERSION)
 
 rm_container_local:
