@@ -5,3 +5,4 @@ pkg/
 Godeps/_workspace/pkg/
 
 benchflow_make
+.DS_Store

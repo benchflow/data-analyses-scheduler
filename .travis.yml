@@ -33,7 +33,7 @@ before_deploy:
   # Clean the v-dev release and tag we are using to release development version in CI
   - sudo wget https://github.com/benchflow/benchflow/raw/dev/ci/clean_v-dev_release.sh -O /usr/bin/clean_v-dev_release.sh
   - sudo chmod +x /usr/bin/clean_v-dev_release.sh
-  - export REPO_NAME=spark-tasks-sender
+  - export REPO_NAME=data-analyses-scheduler
   - /usr/bin/clean_v-dev_release.sh
 
 deploy:
@@ -41,9 +41,9 @@ deploy:
   api_key:
     secure: $GITHUB_ACCESS_TOKEN
   file: 
-    - bin/spark-tasks-sender
+    - bin/data-analyses-scheduler
   skip_cleanup: true
   on:
     tags: false
-    repo: benchflow/spark-tasks-sender
+    repo: benchflow/data-analyses-scheduler
     branch: dev

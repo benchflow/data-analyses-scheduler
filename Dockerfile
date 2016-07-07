@@ -7,7 +7,7 @@ ENV SPARK_VERSION 1.5.1
 ENV PYSPARK_PYTHON python2.7
 ENV PYSPARK_CASSANDRA_VERSION 0.3.5
 ENV HADOOP_VERSION 2.6
-ENV SPARK_TASKS_SENDER_VERSION v-dev
+ENV DATA_ANALYSES_SCHEDULER_VERSION v-dev
 ENV DATA_TRANSFORMERS_VERSION v-dev
 ENV ANALYSERS_VERSION v-dev
 ENV PLUGINS_VERSION v-dev
@@ -16,9 +16,9 @@ ENV PLUGINS_VERSION v-dev
 
 # TODO: remove python, when Spark will be used outside of the container
 RUN apk --update add curl tar python && \
-	# Get spark-tasks-sender
-    wget -q --no-check-certificate -O /app/spark-tasks-sender https://github.com/benchflow/spark-tasks-sender/releases/download/$SPARK_TASKS_SENDER_VERSION/spark-tasks-sender && \
-    chmod +x /app/spark-tasks-sender && \
+	# Get data-analyses-scheduler
+    wget -q --no-check-certificate -O /app/data-analyses-scheduler https://github.com/benchflow/data-analyses-scheduler/releases/download/$DATA_ANALYSES_SCHEDULER_VERSION/data-analyses-scheduler && \
+    chmod +x /app/data-analyses-scheduler && \
     # Install Spark
     curl \
 	--location \
@@ -53,7 +53,7 @@ COPY ./log4j.properties $SPARK_HOME/conf/
 
 COPY ./services/envcp/config.tpl /app/config.tpl
 	
-COPY ./services/300-spark-tasks-sender.conf /apps/chaperone.d/300-spark-tasks-sender.conf
+COPY ./services/300-data-analyses-scheduler.conf /apps/chaperone.d/300-data-analyses-scheduler.conf
 
 #TODO: remove, when Spark will be used as a service outside of this container
 COPY ./services/400-clean-tmp-folder.conf /apps/chaperone.d/400-clean-tmp-folder.conf

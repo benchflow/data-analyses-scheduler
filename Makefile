@@ -1,4 +1,4 @@
-REPONAME = spark-tasks-sender
+REPONAME = data-analyses-scheduler
 DOCKERIMAGENAME = benchflow/$(REPONAME)
 VERSION = dev
 GOPATH_SAVE_RESTORE:=$(shell pwd):${GOPATH}
