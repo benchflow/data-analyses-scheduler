@@ -2,9 +2,13 @@ package sarama
 
 import "sync"
 
-// SyncProducer publishes Kafka messages. It routes messages to the correct broker, refreshing metadata as appropriate,
-// and parses responses for errors. You must call Close() on a producer to avoid leaks, it may not be garbage-collected automatically when
-// it passes out of scope.
+// SyncProducer publishes Kafka messages, blocking until they have been acknowledged. It routes messages to the correct
+// broker, refreshing metadata as appropriate, and parses responses for errors. You must call Close() on a producer
+// to avoid leaks, it may not be garbage-collected automatically when it passes out of scope.
+//
+// The SyncProducer comes with two caveats: it will generally be less efficient than the AsyncProducer, and the actual
+// durability guarantee provided when a message is acknowledged depend on the configured value of `Producer.RequiredAcks`.
+// There are configurations where a message acknowledged by the SyncProducer can still sometimes be lost.
 type SyncProducer interface {
 
 	// SendMessage produces a given message, and returns only when it either has
@@ -67,9 +71,9 @@ func (sp *syncProducer) SendMessage(msg *ProducerMessage) (partition int32, offs
 
 	if err := <-expectation; err != nil {
 		return -1, -1, err
-	} else {
-		return msg.Partition, msg.Offset, nil
 	}
+
+	return msg.Partition, msg.Offset, nil
 }
 
 func (sp *syncProducer) handleSuccesses() {

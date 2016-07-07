@@ -21,9 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mime"
 	"os"
-	"path/filepath"
 	"sort"
 )
 
@@ -57,14 +55,6 @@ func (c Client) FPutObject(bucketName, objectName, filePath, contentType string)
 	// Check for largest object size allowed.
 	if fileSize > int64(maxMultipartPutObjectSize) {
 		return 0, ErrEntityTooLarge(fileSize, maxMultipartPutObjectSize, bucketName, objectName)
-	}
-
-	// Set contentType based on filepath extension if not given or default
-	// value of "binary/octet-stream" if the extension has no associated type.
-	if contentType == "" {
-		if contentType = mime.TypeByExtension(filepath.Ext(filePath)); contentType == "" {
-			contentType = "application/octet-stream"
-		}
 	}
 
 	// NOTE: Google Cloud Storage multipart Put is not compatible with Amazon S3 APIs.

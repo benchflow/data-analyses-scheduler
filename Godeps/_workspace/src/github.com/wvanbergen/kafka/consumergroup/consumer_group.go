@@ -123,7 +123,6 @@ func JoinConsumerGroup(name string, topics []string, zookeeper []string, config 
 	if config.Offsets.ResetOffsets {
 		err = group.ResetOffsets()
 		if err != nil {
-			cg.Logf("FAILED to reset offsets of consumergroup: %s!\n", err)
 			kz.Close()
 			return
 		}
@@ -277,6 +276,18 @@ func (cg *ConsumerGroup) topicListConsumer(topics []string) {
 			return
 
 		case <-consumerChanges:
+			registered, err := cg.instance.Registered()
+			if err != nil {
+				cg.Logf("FAILED to get register status: %s\n", err)
+			} else if !registered {
+				err = cg.instance.Register(topics)
+				if err != nil {
+					cg.Logf("FAILED to register consumer instance: %s!\n", err)
+				} else {
+					cg.Logf("Consumer instance registered (%s).", cg.instance.ID)
+				}
+			}
+
 			cg.Logf("Triggering rebalance due to consumer list change\n")
 			close(stopper)
 			cg.wg.Wait()
@@ -334,45 +345,7 @@ func (cg *ConsumerGroup) topicConsumer(topic string, messages chan<- *sarama.Con
 	cg.Logf("%s :: Stopped topic consumer\n", topic)
 }
 
-// Consumes a partition
-func (cg *ConsumerGroup) partitionConsumer(topic string, partition int32, messages chan<- *sarama.ConsumerMessage, errors chan<- *sarama.ConsumerError, wg *sync.WaitGroup, stopper <-chan struct{}) {
-	defer wg.Done()
-
-	select {
-	case <-stopper:
-		return
-	default:
-	}
-
-	for maxRetries, tries := 3, 0; tries < maxRetries; tries++ {
-		if err := cg.instance.ClaimPartition(topic, partition); err == nil {
-			break
-		} else if err == kazoo.ErrPartitionClaimedByOther && tries+1 < maxRetries {
-			time.Sleep(1 * time.Second)
-		} else {
-			cg.Logf("%s/%d :: FAILED to claim the partition: %s\n", topic, partition, err)
-			return
-		}
-	}
-	defer cg.instance.ReleasePartition(topic, partition)
-
-	nextOffset, err := cg.offsetManager.InitializePartition(topic, partition)
-	if err != nil {
-		cg.Logf("%s/%d :: FAILED to determine initial offset: %s\n", topic, partition, err)
-		return
-	}
-
-	if nextOffset >= 0 {
-		cg.Logf("%s/%d :: Partition consumer starting at offset %d.\n", topic, partition, nextOffset)
-	} else {
-		nextOffset = cg.config.Offsets.Initial
-		if nextOffset == sarama.OffsetOldest {
-			cg.Logf("%s/%d :: Partition consumer starting at the oldest available offset.\n", topic, partition)
-		} else if nextOffset == sarama.OffsetNewest {
-			cg.Logf("%s/%d :: Partition consumer listening for new messages only.\n", topic, partition)
-		}
-	}
-
+func (cg *ConsumerGroup) consumePartition(topic string, partition int32, nextOffset int64) (sarama.PartitionConsumer, error) {
 	consumer, err := cg.consumer.ConsumePartition(topic, partition, nextOffset)
 	if err == sarama.ErrOffsetOutOfRange {
 		cg.Logf("%s/%d :: Partition consumer offset out of Range.\n", topic, partition)
@@ -391,8 +364,68 @@ func (cg *ConsumerGroup) partitionConsumer(topic string, partition int32, messag
 	}
 	if err != nil {
 		cg.Logf("%s/%d :: FAILED to start partition consumer: %s\n", topic, partition, err)
+		return nil, err
+	}
+	return consumer, err
+}
+
+// Consumes a partition
+func (cg *ConsumerGroup) partitionConsumer(topic string, partition int32, messages chan<- *sarama.ConsumerMessage, errors chan<- *sarama.ConsumerError, wg *sync.WaitGroup, stopper <-chan struct{}) {
+	defer wg.Done()
+
+	select {
+	case <-stopper:
+		return
+	default:
+	}
+
+	for maxRetries, tries := int(cg.config.Offsets.ProcessingTimeout/time.Second), 0; tries < maxRetries; tries++ {
+		if err := cg.instance.ClaimPartition(topic, partition); err == nil {
+			break
+		} else if err == kazoo.ErrPartitionClaimedByOther && tries+1 < maxRetries {
+			time.Sleep(1 * time.Second)
+		} else {
+			cg.Logf("%s/%d :: FAILED to claim the partition: %s\n", topic, partition, err)
+			return
+		}
+	}
+
+	defer func() {
+		err := cg.instance.ReleasePartition(topic, partition)
+		if err != nil {
+			cg.Logf("%s/%d :: FAILED to release partition: %s\n", topic, partition, err)
+			cg.errors <- &sarama.ConsumerError{
+				Topic:     topic,
+				Partition: partition,
+				Err:       err,
+			}
+		}
+	}()
+
+	nextOffset, err := cg.offsetManager.InitializePartition(topic, partition)
+	if err != nil {
+		cg.Logf("%s/%d :: FAILED to determine initial offset: %s\n", topic, partition, err)
 		return
 	}
+
+	if nextOffset >= 0 {
+		cg.Logf("%s/%d :: Partition consumer starting at offset %d.\n", topic, partition, nextOffset)
+	} else {
+		nextOffset = cg.config.Offsets.Initial
+		if nextOffset == sarama.OffsetOldest {
+			cg.Logf("%s/%d :: Partition consumer starting at the oldest available offset.\n", topic, partition)
+		} else if nextOffset == sarama.OffsetNewest {
+			cg.Logf("%s/%d :: Partition consumer listening for new messages only.\n", topic, partition)
+		}
+	}
+
+	consumer, err := cg.consumePartition(topic, partition, nextOffset)
+
+	if err != nil {
+		cg.Logf("%s/%d :: FAILED to start partition consumer: %s\n", topic, partition, err)
+		return
+	}
+
 	defer consumer.Close()
 
 	err = nil
@@ -404,6 +437,18 @@ partitionConsumerLoop:
 			break partitionConsumerLoop
 
 		case err := <-consumer.Errors():
+			if err == nil {
+				cg.Logf("%s/%d :: Consumer encountered an invalid state: re-establishing consumption of partition.\n", topic, partition)
+
+				// Errors encountered (if any) are logged in the consumerPartition function
+				var cErr error
+				consumer, cErr = cg.consumePartition(topic, partition, lastOffset)
+				if cErr != nil {
+					break partitionConsumerLoop
+				}
+				continue partitionConsumerLoop
+			}
+
 			for {
 				select {
 				case errors <- err:
@@ -415,6 +460,19 @@ partitionConsumerLoop:
 			}
 
 		case message := <-consumer.Messages():
+			if message == nil {
+				cg.Logf("%s/%d :: Consumer encountered an invalid state: re-establishing consumption of partition.\n", topic, partition)
+
+				// Errors encountered (if any) are logged in the consumerPartition function
+				var cErr error
+				consumer, cErr = cg.consumePartition(topic, partition, lastOffset)
+				if cErr != nil {
+					break partitionConsumerLoop
+				}
+				continue partitionConsumerLoop
+
+			}
+
 			for {
 				select {
 				case <-stopper:

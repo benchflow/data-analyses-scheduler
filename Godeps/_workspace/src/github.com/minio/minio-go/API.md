@@ -12,8 +12,7 @@ import (
 )
 
 func main() {
-    secure := true // Make HTTPS requests by default.
-    s3Client, err := minio.New("s3.amazonaws.com", "YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", secure)
+    s3Client, err := minio.New("s3.amazonaws.com", "YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", false)
     if err !!= nil {
         fmt.Println(err)
         return
@@ -36,7 +35,6 @@ s3Client can be used to perform operations on S3 storage. APIs are described bel
 
 * [`GetObject`](#GetObject)
 * [`PutObject`](#PutObject)
-* [`CopyObject`](#CopyObject)
 * [`StatObject`](#StatObject)
 * [`RemoveObject`](#RemoveObject)
 * [`RemoveIncompleteUpload`](#RemoveIncompleteUpload)
@@ -61,10 +59,10 @@ s3Client can be used to perform operations on S3 storage. APIs are described bel
 ### Bucket operations
 ---------------------------------------
 <a name="MakeBucket">
-#### MakeBucket(bucketName string, location string) error
+#### MakeBucket(bucketName, location)
 Create a new bucket.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_ - Name of the bucket.
 * `location` _string_ - region valid values are _us-west-1_, _us-west-2_,  _eu-west-1_, _eu-central-1_, _ap-southeast-1_, _ap-northeast-1_, _ap-southeast-2_, _sa-east-1_
 
@@ -79,10 +77,10 @@ fmt.Println("Successfully created mybucket.")
 ```
 ---------------------------------------
 <a name="ListBuckets">
-#### ListBuckets() ([]BucketInfo, error)
-Lists all buckets.
+#### ListBuckets()
+List all buckets.
 
-`bucketList` lists bucket in the format:
+`bucketList` emits bucket with the format:
 * `bucket.Name` _string_: bucket name
 * `bucket.CreationDate` time.Time : date when bucket was created
 
@@ -99,10 +97,10 @@ for _, bucket := range buckets {
 ```
 ---------------------------------------
 <a name="BucketExists">
-#### BucketExists(bucketName string) error
+#### BucketExists(bucketName)
 Check if bucket exists.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_ : name of the bucket
 
 __Example__
@@ -115,10 +113,10 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="RemoveBucket">
-#### RemoveBucket(bucketName string) error
+#### RemoveBucket(bucketName)
 Remove a bucket.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_ : name of the bucket
 
 __Example__
@@ -131,16 +129,16 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="GetBucketPolicy">
-#### GetBucketPolicy(bucketName string, objectPrefix string) error
+#### GetBucketPolicy(bucketName, objectPrefix)
 Get access permissions on a bucket or a prefix.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_ : name of the bucket
 * `objectPrefix` _string_ : name of the object prefix
 
 __Example__
 ```go
-bucketPolicy, err := s3Client.GetBucketPolicy("mybucket", "")
+bucketPolicy, err := s3Client.GetBucketPolicy("mybucket")
 if err != nil {
     fmt.Println(err)
     return
@@ -149,13 +147,13 @@ fmt.Println("Access permissions for mybucket is", bucketPolicy)
 ```
 ---------------------------------------
 <a name="SetBucketPolicy">
-#### SetBucketPolicy(bucketname string, objectPrefix string, policy BucketPolicy) error
+#### SetBucketPolicy(bucketname, objectPrefix, policy)
 Set access permissions on bucket or an object prefix.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectPrefix` _string_ : name of the object prefix
-* `policy` _BucketPolicy_: policy can be _BucketPolicyNone_, _BucketPolicyReadOnly_, _BucketPolicyReadWrite_, _BucketPolicyWriteOnly_
+* `policy` _BucketPolicy_: policy can be _non_, _readonly_, _readwrite_, _writeonly_
 
 __Example__
 ```go
@@ -167,10 +165,10 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="RemoveBucketPolicy">
-#### RemoveBucketPolicy(bucketname string, objectPrefix string) error
+#### RemoveBucketPolicy(bucketname, objectPrefix)
 Remove existing permissions on bucket or an object prefix.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectPrefix` _string_ : name of the object prefix
 
@@ -185,10 +183,10 @@ if err != nil {
 
 ---------------------------------------
 <a name="ListObjects">
-#### ListObjects(bucketName string, prefix string, recursive bool, doneCh chan struct{}) <-chan ObjectInfo
+#### ListObjects(bucketName, prefix, recursive, doneCh)
 List objects in a bucket.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectPrefix` _string_: the prefix of the objects that should be listed
 * `recursive` _bool_: `true` indicates recursive style listing and `false` indicates directory style listing delimited by '/'
@@ -223,10 +221,10 @@ for object := range objectCh {
 
 ---------------------------------------
 <a name="ListIncompleteUploads">
-#### ListIncompleteUploads(bucketName string, prefix string, recursive bool, doneCh chan struct{}) <-chan ObjectMultipartInfo
+#### ListIncompleteUploads(bucketName, prefix, recursive)
 List partially uploaded objects in a bucket.
 
-__Parameters__
+__Arguments__
 * `bucketname` _string_: name of the bucket
 * `prefix` _string_: prefix of the object names that are partially uploaded
 * `recursive` bool: directory style listing when false, recursive listing when true
@@ -260,15 +258,15 @@ for multiPartObject := range multiPartObjectCh {
 ---------------------------------------
 ### Object operations
 <a name="GetObject">
-#### GetObject(bucketName string, objectName string) *Object
+#### GetObject(bucketName, objectName)
 Download an object.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 
 __Return Value__
-* `object` _*Object_ : _Object_ represents object reader.
+* `object` _*minio.Object_ : _minio.Object_ represents object reader.
 
 __Example__
 ```go
@@ -286,10 +284,10 @@ if _, err := io.Copy(localFile, object); err != nil {
 ---------------------------------------
 ---------------------------------------
 <a name="FGetObject">
-#### FGetObject(bucketName string, objectName string, filePath string) error
+#### FGetObject(bucketName, objectName, filePath)
 Callback is called with `error` in case of error or `null` in case of success
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 * `filePath` _string_: path to which the object data will be written to
@@ -304,10 +302,11 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="PutObject">
-#### PutObject(bucketName string, objectName string, reader io.Reader, contentType string) (n int, err error)
-Upload contents from `io.Reader` to objectName.
+#### PutObject(bucketName, objectName, reader, contentType)
+Upload an object.
 
-__Parameters__
+Uploading a stream
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 * `reader` _io.Reader_: Any golang object implementing io.Reader
@@ -330,47 +329,11 @@ if err != nil {
 ```
 
 ---------------------------------------
-<a name="CopyObject">
-#### CopyObject(bucketName string, objectName string, objectSource string, conditions CopyConditions) error
-Copy a source object into a new object with the provided name in the provided bucket.
-
-__Parameters__
-* `bucketName` _string_: name of the bucket
-* `objectName` _string_: name of the object
-* `objectSource` _string_: name of the object source.
-* `conditions` _CopyConditions_: Collection of supported CopyObject conditions. ['x-amz-copy-source', 'x-amz-copy-source-if-match', 'x-amz-copy-source-if-none-match', 'x-amz-copy-source-if-unmodified-since', 'x-amz-copy-source-if-modified-since']
-
-__Example__
-```go
-// All following conditions are allowed and can be combined together.
-
-// Set copy conditions.
-var copyConds = minio.NewCopyConditions()
-// Set modified condition, copy object modified since 2014 April.
-copyConds.SetModified(time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC))
-
-// Set unmodified condition, copy object unmodified since 2014 April.
-// copyConds.SetUnmodified(time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC))
-
-// Set matching ETag condition, copy object which matches the following ETag.
-// copyConds.SetMatchETag("31624deb84149d2f8ef9c385918b653a")
-
-// Set matching ETag except condition, copy object which does not match the following ETag.
-// copyConds.SetMatchETagExcept("31624deb84149d2f8ef9c385918b653a")
-
-err := s3Client.CopyObject("my-bucketname", "my-objectname", "/my-sourcebucketname/my-sourceobjectname", copyConds)
-if err != nil {
-    fmt.Println(err)
-    return
-}
-```
-
----------------------------------------
 <a name="FPutObject">
-#### FPutObject(bucketName string, objectName string, filePath string, contentType string) error
+#### FPutObject(bucketName, objectName, filePath, contentType)
 Uploads the object using contents from a file
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 * `filePath` _string_: file path of the file to be uploaded
@@ -386,10 +349,10 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="StatObject">
-#### StatObject(bucketName string, objectName string) (ObjectInfo, error)
+#### StatObject(bucketName, objectName)
 Get metadata of an object.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 
@@ -411,10 +374,10 @@ fmt.Println(objInfo)
 ```
 ---------------------------------------
 <a name="RemoveObject">
-#### RemoveObject(bucketName string, objectName string) error
+#### RemoveObject(bucketName, objectName)
 Remove an object.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 
@@ -428,10 +391,10 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="RemoveIncompleteUpload">
-#### RemoveIncompleteUpload(bucketName string, objectName string) error
+#### RemoveIncompleteUpload(bucketName, objectName)
 Remove an partially uploaded object.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 
@@ -447,14 +410,14 @@ if err != nil {
 ### Presigned operations
 ---------------------------------------
 <a name="PresignedGetObject">
-#### PresignedGetObject(bucketName, objectName string, expiry time.Duration, reqParams url.Values) (*url.URL, error)
+#### PresignedGetObject(bucketName, objectName, expiry)
 Generate a presigned URL for GET.
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket.
 * `objectName` _string_: name of the object.
 * `expiry` _time.Duration_: expiry in seconds.
-* `reqParams` _url.Values_ : additional response header overrides supports _response-expires_, _response-content-type_, _response-cache-control_, _response-content-disposition_
+  `reqParams` _url.Values_ : additional response header overrides supports _response-expires_, _response-content-type_, _response-cache-control_, _response-content-disposition_
 
 __Example__
 ```go
@@ -472,13 +435,13 @@ if err != nil {
 
 ---------------------------------------
 <a name="PresignedPutObject">
-#### PresignedPutObject(bucketName string, objectName string, expiry time.Duration) (*url.URL, error)
+#### PresignedPutObject(bucketName, objectName, expiry)
 Generate a presigned URL for PUT.
 <blockquote>
 NOTE: you can upload to S3 only with specified object name.
 </blockquote>
 
-__Parameters__
+__Arguments__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 * `expiry` _time.Duration_: expiry in seconds
@@ -495,7 +458,7 @@ if err != nil {
 
 ---------------------------------------
 <a name="PresignedPostPolicy">
-#### PresignedPostPolicy(policy PostPolicy) (*url.URL, map[string]string, error)
+#### PresignedPostPolicy
 PresignedPostPolicy we can provide policies specifying conditions restricting
 what you want to allow in a POST request, such as bucket name where objects can be
 uploaded, key name prefixes that you want to allow for the object being created and more.
@@ -518,7 +481,7 @@ policy.SetContentLengthRange(1024, 1024*1024)
 ```
 Get the POST form key/value object:
 ```go
-url, formData, err := s3Client.PresignedPostPolicy(policy)
+formData, err := s3Client.PresignedPostPolicy(policy)
 if err != nil {
     fmt.Println(err)
     return
@@ -532,5 +495,5 @@ for k, v := range m {
     fmt.Printf("-F %s=%s ", k, v)
 }
 fmt.Printf("-F file=@/etc/bash.bashrc ")
-fmt.Printf("%s\n", url)
+fmt.Printf("https://my-bucketname.s3.amazonaws.com\n")
 ```

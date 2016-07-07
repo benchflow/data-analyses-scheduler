@@ -6,6 +6,7 @@ import (
 )
 
 func TestEncodeDecodePacket(t *testing.T) {
+	t.Parallel()
 	encodeDecodeTest(t, &requestHeader{-2, 5})
 	encodeDecodeTest(t, &connectResponse{1, 2, 3, nil})
 	encodeDecodeTest(t, &connectResponse{1, 2, 3, []byte{4, 5, 6}})
@@ -15,6 +16,16 @@ func TestEncodeDecodePacket(t *testing.T) {
 	encodeDecodeTest(t, &pathWatchRequest{"path", false})
 	encodeDecodeTest(t, &CheckVersionRequest{"/", -1})
 	encodeDecodeTest(t, &multiRequest{Ops: []multiRequestOp{{multiHeader{opCheck, false, -1}, &CheckVersionRequest{"/", -1}}}})
+}
+
+func TestRequestStructForOp(t *testing.T) {
+	for op, name := range opNames {
+		if op != opNotify && op != opWatcherEvent {
+			if s := requestStructForOp(op); s == nil {
+				t.Errorf("No struct for op %s", name)
+			}
+		}
+	}
 }
 
 func encodeDecodeTest(t *testing.T, r interface{}) {
@@ -42,6 +53,7 @@ func encodeDecodeTest(t *testing.T, r interface{}) {
 }
 
 func TestEncodeShortBuffer(t *testing.T) {
+	t.Parallel()
 	buf := make([]byte, 0)
 	_, err := encodePacket(buf, &requestHeader{1, 2})
 	if err != ErrShortBuffer {
@@ -51,6 +63,7 @@ func TestEncodeShortBuffer(t *testing.T) {
 }
 
 func TestDecodeShortBuffer(t *testing.T) {
+	t.Parallel()
 	buf := make([]byte, 0)
 	_, err := decodePacket(buf, &responseHeader{})
 	if err != ErrShortBuffer {
@@ -63,6 +76,7 @@ func BenchmarkEncode(b *testing.B) {
 	buf := make([]byte, 4096)
 	st := &connectRequest{Passwd: []byte("1234567890")}
 	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if _, err := encodePacket(buf, st); err != nil {
 			b.Fatal(err)

@@ -235,8 +235,7 @@ func writeCanonicalizedHeaders(buf *bytes.Buffer, req http.Request) {
 	}
 }
 
-// The following list is already sorted and should always be, otherwise we could
-// have signature-related issues
+// Must be sorted:
 var resourceList = []string{
 	"acl",
 	"location",
@@ -244,13 +243,13 @@ var resourceList = []string{
 	"notification",
 	"partNumber",
 	"policy",
-	"requestPayment",
+	"response-content-type",
+	"response-content-language",
+	"response-expires",
 	"response-cache-control",
 	"response-content-disposition",
 	"response-content-encoding",
-	"response-content-language",
-	"response-content-type",
-	"response-expires",
+	"requestPayment",
 	"torrent",
 	"uploadId",
 	"uploads",
@@ -272,6 +271,7 @@ func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request) {
 	path := encodeURL2Path(requestURL)
 	buf.WriteString(path)
 
+	sort.Strings(resourceList)
 	if requestURL.RawQuery != "" {
 		var n int
 		vals, _ := url.ParseQuery(requestURL.RawQuery)

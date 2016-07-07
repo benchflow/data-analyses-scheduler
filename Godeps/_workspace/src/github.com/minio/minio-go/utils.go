@@ -63,7 +63,7 @@ func sumHMAC(key []byte, data []byte) []byte {
 }
 
 // getEndpointURL - construct a new endpoint.
-func getEndpointURL(endpoint string, secure bool) (*url.URL, error) {
+func getEndpointURL(endpoint string, inSecure bool) (*url.URL, error) {
 	if strings.Contains(endpoint, ":") {
 		host, _, err := net.SplitHostPort(endpoint)
 		if err != nil {
@@ -79,9 +79,9 @@ func getEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 			return nil, ErrInvalidArgument(msg)
 		}
 	}
-	// If secure is false, use 'http' scheme.
+	// if inSecure is true, use 'http' scheme.
 	scheme := "https"
-	if !secure {
+	if inSecure {
 		scheme = "http"
 	}
 
@@ -173,23 +173,6 @@ func isAmazonEndpoint(endpointURL *url.URL) bool {
 	if endpointURL.Host == "s3.amazonaws.com" {
 		return true
 	}
-	if isAmazonChinaEndpoint(endpointURL) {
-		return true
-	}
-	return false
-}
-
-// Match if it is exactly Amazon S3 China endpoint.
-// Customers who wish to use the new Beijing Region are required to sign up for a separate set of account credentials unique to the China (Beijing) Region.
-// Customers with existing AWS credentials will not be able to access resources in the new Region, and vice versa."
-// For more info https://aws.amazon.com/about-aws/whats-new/2013/12/18/announcing-the-aws-china-beijing-region/
-func isAmazonChinaEndpoint(endpointURL *url.URL) bool {
-	if endpointURL == nil {
-		return false
-	}
-	if endpointURL.Host == "s3.cn-north-1.amazonaws.com.cn" {
-		return true
-	}
 	return false
 }
 
@@ -256,7 +239,7 @@ func isValidBucketName(bucketName string) error {
 	if bucketName[0] == '.' || bucketName[len(bucketName)-1] == '.' {
 		return ErrInvalidBucketName("Bucket name cannot start or end with a '.' dot.")
 	}
-	if match, _ := regexp.MatchString("\\.\\.", bucketName); match {
+	if match, _ := regexp.MatchString("\\.\\.", bucketName); match == true {
 		return ErrInvalidBucketName("Bucket name cannot have successive periods.")
 	}
 	if !validBucketName.MatchString(bucketName) {

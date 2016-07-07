@@ -1,45 +1,23 @@
 {
-	"ImportPath": "sender",
-	"GoVersion": "go1.5.1",
+	"ImportPath": "cloud/benchflow/sender",
+	"GoVersion": "go1.5.2",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Shopify/sarama",
-			"Comment": "v1.6.1-4-gbc4baeb",
-			"Rev": "bc4baebf0521171e11b6b6661bb76564b9c568d6"
+			"Comment": "v1.9.0",
+			"Rev": "38d579a708d2f87dd4e35342241048e361d1e66a"
 		},
 		{
-			"ImportPath": "github.com/eapache/go-resiliency/breaker",
-			"Comment": "v1.0.0-1-ged0319b",
-			"Rev": "ed0319b32e66e3295db52695ba3ee493e823fbfe"
-		},
-		{
-			"ImportPath": "github.com/eapache/queue",
-			"Comment": "v1.0.2",
-			"Rev": "ded5959c0d4e360646dc9e9908cff48666781367"
-		},
-		{
-			"ImportPath": "github.com/golang/snappy",
-			"Rev": "723cc1e459b8eea2dea4583200fd60757d40097a"
-		},
-		{
-			"ImportPath": "github.com/klauspost/crc32",
-			"Rev": "f8d2e12057f7ef26ae42ecfa42697f4bdc32d7eb"
-		},
-		{
-			"ImportPath": "github.com/lann/builder",
-			"Rev": "f22ce00fd9394014049dad11c244859432bd6820"
-		},
-		{
-			"ImportPath": "github.com/lann/ps",
-			"Rev": "62de8c46ede02a7675c4c79c84883eb164cb71e3"
+			"ImportPath": "github.com/minio/minio-go",
+			"Comment": "1.0.1",
+			"Rev": "015d1ed503b43a71a8dd4d97c00bff4b0c191bbd"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "f7716cbe52baa25d2e9b0d0da546fcf909fc16b4"
-		},
-		{
-			"ImportPath": "github.com/wvanbergen/kafka",
-			"Rev": "1a8639a45164fcc245d5c7b4bd3ccfbd1a0ffbf3"
 		},
 		{
 			"ImportPath": "github.com/streamrail/concurrent-map",
@@ -50,8 +28,12 @@
 			"Rev": "d8a428b8a30606e1d0b355d91edf282609ade1a6"
 		},
 		{
-			"ImportPath": "github.com/xordataexchange/crypt/config",
-			"Rev": "749e360c8f236773f28fc6d3ddfce4a470795227"
+			"ImportPath": "github.com/wvanbergen/kazoo-go",
+			"Rev": "0f768712ae6f76454f987c3356177e138df258f8"
 		}
 	]
 }
+
+//TODO. NOTE: github.com/wvanbergen/kazoo-go needed by github.com/wvanbergen/kafka and not automatically downloaded because of the github.com/wvanbergen/kafka repository structure
+
+		

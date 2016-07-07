@@ -84,8 +84,8 @@ const (
 
 // NewV2 - instantiate minio client with Amazon S3 signature version
 // '2' compatibility.
-func NewV2(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*Client, error) {
-	clnt, err := privateNew(endpoint, accessKeyID, secretAccessKey, secure)
+func NewV2(endpoint string, accessKeyID, secretAccessKey string, insecure bool) (*Client, error) {
+	clnt, err := privateNew(endpoint, accessKeyID, secretAccessKey, insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +96,8 @@ func NewV2(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*
 
 // NewV4 - instantiate minio client with Amazon S3 signature version
 // '4' compatibility.
-func NewV4(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*Client, error) {
-	clnt, err := privateNew(endpoint, accessKeyID, secretAccessKey, secure)
+func NewV4(endpoint string, accessKeyID, secretAccessKey string, insecure bool) (*Client, error) {
+	clnt, err := privateNew(endpoint, accessKeyID, secretAccessKey, insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +108,8 @@ func NewV4(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*
 
 // New - instantiate minio client Client, adds automatic verification
 // of signature.
-func New(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*Client, error) {
-	clnt, err := privateNew(endpoint, accessKeyID, secretAccessKey, secure)
+func New(endpoint string, accessKeyID, secretAccessKey string, insecure bool) (*Client, error) {
+	clnt, err := privateNew(endpoint, accessKeyID, secretAccessKey, insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -148,9 +148,9 @@ func (r *lockedRandSource) Seed(seed int64) {
 	r.lk.Unlock()
 }
 
-func privateNew(endpoint, accessKeyID, secretAccessKey string, secure bool) (*Client, error) {
+func privateNew(endpoint, accessKeyID, secretAccessKey string, insecure bool) (*Client, error) {
 	// construct endpoint.
-	endpointURL, err := getEndpointURL(endpoint, secure)
+	endpointURL, err := getEndpointURL(endpoint, insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +168,10 @@ func privateNew(endpoint, accessKeyID, secretAccessKey string, secure bool) (*Cl
 
 	// Instantiate http client and bucket location cache.
 	clnt.httpClient = &http.Client{
+		// Setting a sensible time out of 2minutes to wait for response
+		// headers. Request is pro-actively cancelled after 2minutes
+		// if no response was received from server.
+		Timeout:   2 * time.Minute,
 		Transport: http.DefaultTransport,
 	}
 
@@ -408,20 +412,11 @@ func (c Client) executeMethod(method string, metadata requestMetadata) (res *htt
 		bodySeeker, isRetryable = metadata.contentBody.(io.Seeker)
 	}
 
-	// Create a done channel to control 'ListObjects' go routine.
-	doneCh := make(chan struct{}, 1)
-
-	// Indicate to our routine to exit cleanly upon return.
-	defer close(doneCh)
-
-	// Blank indentifier is kept here on purpose since 'range' without
-	// blank identifiers is only supported since go1.4
-	// https://golang.org/doc/go1.4#forrange.
-	for _ = range c.newRetryTimer(MaxRetry, time.Second, time.Second*30, MaxJitter, doneCh) {
-		// Retry executes the following function body if request has an
-		// error until maxRetries have been exhausted, retry attempts are
-		// performed after waiting for a given period of time in a
-		// binomial fashion.
+	// Retry executes the following function body if request has an
+	// error until maxRetries have been exhausted, retry attempts are
+	// performed after waiting for a given period of time in a
+	// binomial fashion.
+	for range c.newRetryTimer(MaxRetry, time.Second, time.Second*30, MaxJitter) {
 		if isRetryable {
 			// Seek back to beginning for each attempt.
 			if _, err = bodySeeker.Seek(0, 0); err != nil {
@@ -504,17 +499,8 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 		method = "POST"
 	}
 
-	// Default all requests to "us-east-1" or "cn-north-1" (china region)
-	location := "us-east-1"
-	if isAmazonChinaEndpoint(c.endpointURL) {
-		// For china specifically we need to set everything to
-		// cn-north-1 for now, there is no easier way until AWS S3
-		// provides a cleaner compatible API across "us-east-1" and
-		// China region.
-		location = "cn-north-1"
-	}
-
 	// Gather location only if bucketName is present.
+	location := "us-east-1" // Default all other requests to "us-east-1".
 	if metadata.bucketName != "" {
 		location, err = c.getBucketLocation(metadata.bucketName)
 		if err != nil {
@@ -557,15 +543,10 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 		req.Body = ioutil.NopCloser(metadata.contentBody)
 	}
 
-	// FIXEM: Enable this when Google Cloud Storage properly supports 100-continue.
-	// Skip setting 'expect' header for Google Cloud Storage, there
-	// are some known issues - https://github.com/restic/restic/issues/520
-	if !isGoogleEndpoint(c.endpointURL) {
-		// Set 'Expect' header for the request.
-		req.Header.Set("Expect", "100-continue")
-	}
+	// set 'Expect' header for the request.
+	req.Header.Set("Expect", "100-continue")
 
-	// Set 'User-Agent' header for the request.
+	// set 'User-Agent' header for the request.
 	c.setUserAgent(req)
 
 	// Set all headers.
@@ -661,5 +642,6 @@ func (c Client) makeTargetURL(bucketName, objectName, bucketLocation string, que
 	if err != nil {
 		return nil, err
 	}
+
 	return u, nil
 }
