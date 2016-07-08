@@ -3,7 +3,7 @@ FROM benchflow/base-images:dns-envconsul-java8_dev
 MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
 
 ENV SPARK_HOME /usr/spark
-ENV SPARK_VERSION 1.5.1
+ENV SPARK_VERSION 1.6.2
 ENV PYSPARK_PYTHON python2.7
 ENV PYSPARK_CASSANDRA_VERSION 0.3.5
 ENV HADOOP_VERSION 2.6
@@ -11,10 +11,9 @@ ENV DATA_ANALYSES_SCHEDULER_VERSION v-dev
 ENV DATA_TRANSFORMERS_VERSION v-dev
 ENV ANALYSERS_VERSION v-dev
 ENV PLUGINS_VERSION v-dev
-#TODO: use this, currently we use a local configuration for testing purposes
-# ENV CONFIGURATION_FILTER 'config.json'
 
 # TODO: remove python, when Spark will be used outside of the container
+# TODO: Improve the following code to download only once from github and keep all the wanted files in the right directories
 RUN apk --update add curl tar python && \
 	# Get data-analyses-scheduler
     wget -q --no-check-certificate -O /app/data-analyses-scheduler https://github.com/benchflow/data-analyses-scheduler/releases/download/$DATA_ANALYSES_SCHEDULER_VERSION/data-analyses-scheduler && \
@@ -27,29 +26,39 @@ RUN apk --update add curl tar python && \
 	| gunzip \
 	| tar x -C /usr/ && \
     ln -s /usr/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION /usr/spark && \
-    # Get data-transformers
+    mkdir -p /app/configuration && \
     mkdir -p /app/data-transformers && \
     wget -q -O - https://github.com/benchflow/data-transformers/archive/$DATA_TRANSFORMERS_VERSION.tar.gz \
     | tar xz --strip-components=2 -C /app/data-transformers data-transformers-$DATA_TRANSFORMERS_VERSION/data-transformers && \
+    # Get data-transformers scheduler configuration file
+    wget -q -O - https://github.com/benchflow/data-transformers/archive/$DATA_TRANSFORMERS_VERSION.tar.gz \
+    | tar xz --strip-components=1 --wildcards --no-anchored '*.scheduler.configuration.yml' && \
+    for f in *.scheduler.configuration.yml; do mv -i "$f" "app/configuration/$f"; done  && \
     # Get analysers
     mkdir -p /app/analysers && \
     wget -q -O - https://github.com/benchflow/analysers/archive/$ANALYSERS_VERSION.tar.gz \
     | tar xz --strip-components=2 -C /app/analysers analysers-$ANALYSERS_VERSION/analysers && \
-    # Get plugins (configuration files)
-    #TODO: use this, currently we use a local configuration for testing purposes
-    # mkdir -p /app/data-transformers/conf && \
+    # Get analyser scheduler configuration file
+    wget -q -O - https://github.com/benchflow/analysers/archive/$ANALYSERS_VERSION.tar.gz \
+    | tar xz --strip-components=1 --wildcards --no-anchored '*.scheduler.configuration.yml' && \
+    for f in *.scheduler.configuration.yml; do mv -i "$f" "app/configuration/$f"; done  && \
+    # Get plugins (configuration files) TODO: do not let the following code fails if nothing is found in the .tar.gunzip
+    mkdir -p /app/data-transformers/suts && \
+    wget -q -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
+    | tar xz --strip-components=1 -C /app/data-transformers/suts --wildcards --no-anchored 'data-transformers.configuration.yml' && \
+    # TODO: currenlty skipping analysers configuration because we don't have any
+    # && \
+    # mkdir -p /app/analysers/suts && \
     # wget -q -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
-    # | tar xz --strip-components=1 -C ./app/data-transformers/conf --wildcards --no-anchored $CONFIGURATION_FILTER && \
+    # | tar xz --strip-components=1 -C /app/analysers/suts --wildcards --no-anchored 'analysers.configuration.yml'
     # Clean up
     apk del --purge curl tar && \
     rm -rf /var/cache/apk/*
 
-COPY ./configuration /app/configuration
-# TODO: Remove this
-# COPY ./configuration /app/data-transformers/conf
-# COPY ./configuration /app/analysers/conf
+COPY ./configuration.yml /app/configuration.yml
+
 COPY ./dependencies/pyspark-cassandra-assembly-$PYSPARK_CASSANDRA_VERSION.jar $SPARK_HOME/
-COPY ./log4j.properties $SPARK_HOME/conf/
+COPY ./configuration/spark/log4j.properties $SPARK_HOME/conf/
 
 COPY ./services/envcp/config.tpl /app/config.tpl
 	
