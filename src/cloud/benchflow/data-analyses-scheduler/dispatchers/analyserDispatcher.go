@@ -1,12 +1,15 @@
-package main
+package dispatchers
 
 import (
 	"fmt"
+	"cloud/benchflow/data-analyses-scheduler/workers"
+	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
 // Queue of workers, and the queue of work
 var AnalyserWorkerQueue chan chan WorkRequest
-var AnalyserWorkQueue = make(chan WorkRequest, 100)
+// The size of this is set to limit the queue to twice the number of transformer worker plus twice the number of analyser workers
+var AnalyserWorkQueue = make(chan WorkRequest, 2*NTransformerWorkers+2*NAnalyserWorkers)
 
 // Starts the dispatcher
 func StartAnalyserDispatcher(nworkers int) {
@@ -16,7 +19,7 @@ func StartAnalyserDispatcher(nworkers int) {
   // Starts the workers
   for i := 0; i<nworkers; i++ {
     fmt.Println("Starting worker", i+1)
-    worker := NewAnalyserWorker(i+1, AnalyserWorkerQueue)
+    worker := workers.NewAnalyserWorker(i+1, AnalyserWorkerQueue)
     worker.Start()
   }
   

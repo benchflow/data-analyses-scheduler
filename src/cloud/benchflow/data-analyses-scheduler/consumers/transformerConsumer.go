@@ -1,4 +1,4 @@
-package main
+package consumers
 
 import (
  	"fmt"
@@ -9,6 +9,10 @@ import (
 	"os/signal"
 	"strings"
 	"time"
+	"cloud/benchflow/data-analyses-scheduler/config"
+	"cloud/benchflow/data-analyses-scheduler/scripts"
+	"cloud/benchflow/data-analyses-scheduler/dispatchers"
+	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
 
@@ -18,7 +22,7 @@ func kafkaConsumer(name string) consumergroup.ConsumerGroup {
 	config.ClientID = "benchflow"
 	config.Offsets.Initial = sarama.OffsetOldest
 	config.Offsets.ProcessingTimeout = 10 * time.Second
-	consumer, err := consumergroup.JoinConsumerGroup(name+"SparkTasksSenderGroup", []string{name}, []string{kafkaIp+":"+kafkaPort}, config)
+	consumer, err := consumergroup.JoinConsumerGroup(name+"SparkTasksSenderGroup", []string{name}, []string{KafkaIp+":"+KafkaPort}, config)
 	if err != nil {
 		panic("Could not connect to kafka")
 		}
@@ -48,7 +52,7 @@ func StartDataTransformerConsumer(t TransformerSetting) {
 				fmt.Println("Received invalid json: " + string(m.Value))
 				continue
 				}
-			numOfTrials, SUTName, SUTVersion := takeBenchmarkConfigFromMinio(msg.Experiment_id)
+			numOfTrials, SUTName, SUTVersion := config.TakeBenchmarkConfigFromMinio(msg.Experiment_id)
 			minioKeys := strings.Split(msg.Minio_key, ",")
 			containerIds := strings.Split(msg.Container_id, ",")
 			for i, k := range minioKeys {
@@ -56,14 +60,14 @@ func StartDataTransformerConsumer(t TransformerSetting) {
 					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+k+", trial id: "+msg.Trial_id)
 					containerID := containerIds[i]
 					hostID := msg.Host_id
-					args := constructTransformerSubmitArguments(s, msg, containerID, hostID, SUTName, SUTVersion)
-					TransformerWorkQueue <- WorkRequest{SparkArgs: args, Script: s.Script, ScriptName: t.Topic, Topic: t.Topic, TrialID: msg.Trial_id, ExperimentID: msg.Experiment_id, ContainerID: msg.Container_id, HostID: msg.Host_id, SUTName: SUTName, SUTVersion: SUTVersion, TotalTrialsNum: numOfTrials, CollectorName: msg.Collector_name, Level: "trial"}
+					args := scripts.ConstructTransformerSubmitArguments(s, msg, containerID, hostID, SUTName, SUTVersion)
+					dispatchers.TransformerWorkQueue <- WorkRequest{SparkArgs: args, Script: s.Script, ScriptName: t.Topic, Topic: t.Topic, TrialID: msg.Trial_id, ExperimentID: msg.Experiment_id, ContainerID: msg.Container_id, HostID: msg.Host_id, SUTName: SUTName, SUTVersion: SUTVersion, TotalTrialsNum: numOfTrials, CollectorName: msg.Collector_name, Level: "trial"}
   					fmt.Println("Transformer work request queued")
 					}
 				}
 			consumer.CommitUpto(m)
 			}
 		consumer.Close()
-		waitGroup.Done()
+		WaitGroup.Done()
 		}()
 }

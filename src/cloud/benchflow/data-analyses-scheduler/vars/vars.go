@@ -1,57 +1,64 @@
-package main
+package vars
 
 import (
 	"github.com/streamrail/concurrent-map"
 	"sync"
 )
 
+// The queue for the analyser consumer. Here the workers send their completed work requests to signal the consumer to check requirements and
+// send new work accordingly.
+var AnalyserDispatchRequestsQueue chan WorkRequest
+
 // Concurrent map for counting how many trials have been performed for a certain experiment
-var trialCount = cmap.New()
+var TrialCount = cmap.New()
 
 // Configuration of the scripts and dependencies
-var c Configuration
+var C Configuration
 
 // Map that connects the string representing script requirements to the list of scripts that have those requirement as per configuration
-var reqScripts = make(map[string] []AnalyserScript)
+var ReqScripts = make(map[string] []AnalyserScript)
 
 // Nested map that tracks for a given trialID and requirement if said requirement was met for that trial (if contains true, requirement is met)
 // Example: reqGroupDone[trial_1][cpu] = true
-var reqTracker = make(map[string] map[string] bool)
+var ReqTracker = make(map[string] map[string] bool)
 
 // Lists of all requirements
-var allRequirements []string
+var AllRequirements []string
 
 //List of all scripts
-var allScripts []string
+var AllScripts []string
 
 // Variables from configuration of the app
-var cassandraKeyspace string
-var kafkaIp string
-var kafkaPort string
-var cassandraHost string
-var minioHost string
-var minioPort string
-var minioAccessKey string
-var minioSecretKey string
-var runsBucket string
-var driverMemory string
-var executorMemory string
-var executorHeartbeatInterval string
-var blockManagerSlaveTimeoutMs string
-var ackWaitTimeout string
-var sparkHome string
-var sparkMaster string
-var sparkPort string
-var alluxio_port string
-var pysparkCassandraVersion string
-var analysersPath string
-var transformersPath string
-var configurationsPath string
-var benchmarksConfigBucket string
-var benchmarksConfigName string
+var CassandraKeyspace string
+var KafkaIp string
+var KafkaPort string
+var CassandraHost string
+var MinioHost string
+var MinioPort string
+var MinioAccessKey string
+var MinioSecretKey string
+var RunsBucket string
+var DriverMemory string
+var ExecutorMemory string
+var ExecutorHeartbeatInterval string
+var BlockManagerSlaveTimeoutMs string
+var AckWaitTimeout string
+var SparkHome string
+var SparkMaster string
+var SparkPort string
+var Alluxio_port string
+var PysparkCassandraVersion string
+var AnalysersPath string
+var TransformersPath string
+var ConfigurationsPath string
+var BenchmarksConfigBucket string
+var BenchmarksConfigName string
+
+var NTransformerWorkers int
+var NAnalyserWorkers int
 
 // Sync group to prevent the app from terminating as long as consumers are listening on kafka
-var waitGroup sync.WaitGroup
+var WaitGroup sync.WaitGroup
 
 // Structures for storing the dependencies configurations
 type Configuration struct {

@@ -1,7 +1,9 @@
-package main
+package workers
 
 import (
  	"fmt"
+ 	"cloud/benchflow/data-analyses-scheduler/scripts"
+ 	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
 // Create new analyser worker
@@ -34,25 +36,25 @@ func (w *AnalyserWorker) Start() {
     	// Get work from the worker's work queue
         case work := <-w.Work:
         	// Submit script to Spark
-			success := submitScript(work.SparkArgs, work.Script)
+			success := scripts.SubmitScript(work.SparkArgs, work.Script)
 			if success {
-				meetRequirement(work.ScriptName, work.TrialID, work.ExperimentID, work.Level)
+				scripts.MeetRequirement(work.ScriptName, work.TrialID, work.ExperimentID, work.Level)
 			}
 			// Increment counter for trials completed for the given script
-			counterId := getCounterID(work.ExperimentID, work.ScriptName, work.ContainerID, work.HostID, work.CollectorName)
-			trialCount.SetIfAbsent(counterId, 0)
-			i, ok := trialCount.Get(counterId)
+			counterId := scripts.GetCounterID(work.ExperimentID, work.ScriptName, work.ContainerID, work.HostID, work.CollectorName)
+			TrialCount.SetIfAbsent(counterId, 0)
+			i, ok := TrialCount.Get(counterId)
 			if ok {
-				trialCount.Set(counterId, i.(int)+1)
+				TrialCount.Set(counterId, i.(int)+1)
 				}
 			// Check for script completions, and send the work request to the analyser consumer queue to signal a script is finished and
 			// reqs need to be checked again to launch more scripts.
 			if work.Level == "trial" {
-				isTrialComplete(work.TrialID)
+				scripts.IsTrialComplete(work.TrialID)
 				AnalyserDispatchRequestsQueue <- work
 			}
 			if work.Level == "experiment" {
-				isExperimentComplete(work.ExperimentID)
+				scripts.IsExperimentComplete(work.ExperimentID)
 			}
           
         // Stop if signalled
