@@ -3,9 +3,9 @@ DOCKERIMAGENAME = benchflow/$(REPONAME)
 VERSION = dev
 GOPATH_SAVE_RESTORE:=$(shell pwd):${GOPATH}
 
-.PHONY: all build_release 
+.PHONY: all build_release install_release
 
-all: build_release
+all: build_release install_release
 
 save_dependencies:
 	# TODO: figure out how to get the following work, currently we add the dependencies to the Godeps.json manually
@@ -46,14 +46,16 @@ clean:
 	rm -rf Godeps/_workspace/pkg
 
 build:
-	godep go build -o bin/$(REPONAME) -v ./...
+	GOPATH=$(GOPATH_SAVE_RESTORE) godep go build -v ./...
 
 build_release:
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 godep go build -ldflags '-s' -o bin/$(REPONAME) -v ./...
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 godep go build -ldflags '-s' -v ./...
 
 install:
 	godep go install -v ./...
-	mv bin/$(REPONAME) bin/$(REPONAME)
+	
+install_release:
+	godep go install -v ./...
 
 test:
 	godep go test ./...
