@@ -1,4 +1,4 @@
-package main
+package scripts
 
 import (
 	"fmt"
@@ -6,12 +6,13 @@ import (
 	"os"
 	"strings"
 	"bytes"
+	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
 // Function that submits a script with spark-submit and checks the output for errors
-func submitScript(args []string, script string) bool {
+func SubmitScript(args []string, script string) bool {
 	retries := 0
-	cmd := exec.Command(sparkHome+"/bin/spark-submit", args...)
+	cmd := exec.Command(SparkHome+"/bin/spark-submit", args...)
 	for retries < 3 {
 		retries += 1
 		cmd.Stdout = os.Stdout

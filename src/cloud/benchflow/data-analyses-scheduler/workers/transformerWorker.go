@@ -1,7 +1,9 @@
-package main
+package workers
 
 import (
  	"fmt"
+ 	"cloud/benchflow/data-analyses-scheduler/scripts"
+ 	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
 // Create new worker
@@ -34,9 +36,9 @@ func (w *TransformerWorker) Start() {
     	// Takes work from its own queue
         case work := <-w.Work:
           // Submits script to Spark
-          success := submitScript(work.SparkArgs, work.Script)
+          success := scripts.SubmitScript(work.SparkArgs, work.Script)
           if success {
-			  meetRequirement(work.Topic, work.TrialID, work.ExperimentID, "trial")
+			  scripts.MeetRequirement(work.Topic, work.TrialID, work.ExperimentID, "trial")
 			  AnalyserDispatchRequestsQueue <- work
 		  }
           

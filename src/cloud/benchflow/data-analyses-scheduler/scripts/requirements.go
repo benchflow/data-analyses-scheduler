@@ -1,12 +1,13 @@
-package main
+package scripts
 
 import (
 	"fmt"
 	"strings"
+	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
 // Function that checks if the given requirements are met
-func checkRequirements(neededReqsString string, currentReqsString map[string]bool) bool {
+func CheckRequirements(neededReqsString string, currentReqsString map[string]bool) bool {
 	reqMet := true
 	neededReqs := strings.Split(neededReqsString, ",")
 	for _, nr := range neededReqs {
@@ -24,45 +25,45 @@ func checkRequirements(neededReqsString string, currentReqsString map[string]boo
 }
 
 // Function that registers a given requirement as met
-func meetRequirement(req string, trialID string, experimentID string, level string) {
+func MeetRequirement(req string, trialID string, experimentID string, level string) {
 	if level == "trial" {
-		if _, ok := reqTracker[trialID]; !ok {
-			reqTracker[trialID] = make(map[string]bool)
+		if _, ok := ReqTracker[trialID]; !ok {
+			ReqTracker[trialID] = make(map[string]bool)
 		}
-		reqTracker[trialID][req] = true
+		ReqTracker[trialID][req] = true
 	} else if level == "experiment" {
-		if _, ok := reqTracker[experimentID]; !ok {
-			reqTracker[experimentID] = make(map[string]bool)
+		if _, ok := ReqTracker[experimentID]; !ok {
+			ReqTracker[experimentID] = make(map[string]bool)
 		}
-		reqTracker[experimentID][req] = true
+		ReqTracker[experimentID][req] = true
 	}
 }
 
 // Function that checks if all scripts for a given trial have been concluded
-func isTrialComplete(trialID string) bool{
-	for _, sc := range allScripts {
-		if _, ok := reqTracker[trialID][sc]; !ok {
+func IsTrialComplete(trialID string) bool{
+	for _, sc := range AllScripts {
+		if _, ok := ReqTracker[trialID][sc]; !ok {
 			return false
 			}
 		} 
 	fmt.Println("All scripts for "+trialID+" done")
-	delete(reqTracker, trialID)
+	delete(ReqTracker, trialID)
 	return true
 }
 
 // Function that checks if all scripts for a given experiment have been concluded
-func isExperimentComplete(experimentID string) bool{
-	for _, sc := range allScripts {
-		if _, ok := reqTracker[experimentID][sc]; !ok {
+func IsExperimentComplete(experimentID string) bool{
+	for _, sc := range AllScripts {
+		if _, ok := ReqTracker[experimentID][sc]; !ok {
 			return false
 			}
 		} 
 	fmt.Println("All scripts for "+experimentID+" done")
-	delete(reqTracker, experimentID)
+	delete(ReqTracker, experimentID)
 	return true
 }
 
 // Function that generates the key for the trial counter map
-func getCounterID(experimentID string, scriptName string, containerID string, hostID string, collectorName string) string {
+func GetCounterID(experimentID string, scriptName string, containerID string, hostID string, collectorName string) string {
 	return experimentID+"_"+scriptName+"_"+containerID+"_"+hostID+"_"+collectorName
 }
