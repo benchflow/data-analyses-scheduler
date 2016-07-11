@@ -9,6 +9,8 @@ env:
   - GOARCH=amd64
 gobuild_args:
 
+go_import_path: cloud/benchflow/data-analyses-scheduler
+
 # whitelist
 branches:
   only:
