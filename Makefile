@@ -59,7 +59,7 @@ test:
 	godep go test ./...
 
 build_container:
-	docker build -t $(DOCKERIMAGENAME)_$(VERSION) -f Dockerfile .
+	docker build -t $(DOCKERIMAGENAME):$(VERSION) -f Dockerfile .
 
 build_container_local:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 godep go build -ldflags '-s' -o bin/$(REPONAME)_linux -v ./...
