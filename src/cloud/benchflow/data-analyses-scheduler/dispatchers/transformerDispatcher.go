@@ -1,12 +1,16 @@
-package main
+package dispatchers
 
 import (
 	"fmt"
+	"cloud/benchflow/data-analyses-scheduler/workers"
+	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
 // Queue of workers, and the queue of work
 var TransformerWorkerQueue chan chan WorkRequest
-var TransformerWorkQueue = make(chan WorkRequest, 100)
+// The size is set to twice the number of tranformer workers, in order to not take too many messages from Kafka when the workers are not ready
+// to launch scripts
+var TransformerWorkQueue = make(chan WorkRequest, NTransformerWorkers*2)
 
 // Starts the dispatcher
 func StartTransformerDispatcher(nworkers int) {
@@ -16,7 +20,7 @@ func StartTransformerDispatcher(nworkers int) {
   // Starts the workers
   for i := 0; i<nworkers; i++ {
     fmt.Println("Starting worker", i+1)
-    worker := NewTransformerWorker(i+1, TransformerWorkerQueue)
+    worker := workers.NewTransformerWorker(i+1, TransformerWorkerQueue)
     worker.Start()
   }
   
