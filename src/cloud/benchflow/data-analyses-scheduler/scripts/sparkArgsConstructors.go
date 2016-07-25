@@ -49,7 +49,7 @@ func constructSparkArguments() []string {
 func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string, SUTName string, SUTVersion string, SUTType string) []string {
 	var args []string
 	args = constructSparkArguments()
-	args = append(args, "--py-files", AppPath+"/"+TransformersPath+"/commons/commons.py"+","+TransformersPath+"/transformations/dataTransformations.py"+","+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
+	args = append(args, "--py-files", AppPath+"/"+TransformersPath+"/commons/commons.py"+","+AppPath+"/"+TransformersPath+"/transformations/dataTransformations.py"+","+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
 	configFilePath := getConfigFilePath(SUTVersion, SUTName, SUTType, "data-transformers.configuration.yml")
 	if configFilePath != "" {
 		args = append(args, "--files", configFilePath)
