@@ -2,8 +2,31 @@ package scripts
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"strings"
 	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
+
+// Function to resolve the correct configuration file path based on the SUT Name and Version
+func getConfigFilePath(SUTVersion string, SUTName string, fileName string) string {
+	versionNums := strings.Split(SUTVersion, ".")
+	dirs, _ := ioutil.ReadDir(ConfigurationsPath+"/"+SUTName)
+    for _, dir := range dirs {
+    	dirName := dir.Name()
+    	if dirName == SUTVersion {
+    		return ConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
+		}
+    	vRange := strings.Split(dirName, "-")
+    	if len(vRange) == 2 {
+    		vNumsRangeLow := strings.Split(vRange[0], ".")
+    		vNumsRangeHigh := strings.Split(vRange[1], ".")
+    		if versionNums[0] >= vNumsRangeLow[0] && versionNums[0] <= vNumsRangeHigh[0] && versionNums[1] >= vNumsRangeLow[1] && versionNums[1] <= vNumsRangeHigh[1] && versionNums[2] >= vNumsRangeLow[2] && versionNums[2] <= vNumsRangeHigh[2] {
+    			return ConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
+    		}
+		}
+    }
+    return ""
+}
 
 // Function that constructs and returns the arguments for the Spark configuration
 func constructSparkArguments() []string {
@@ -25,7 +48,10 @@ func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 	var args []string
 	args = constructSparkArguments()
 	args = append(args, "--py-files", TransformersPath+"/commons/commons.py"+","+TransformersPath+"/transformations/dataTransformations.py"+","+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
-	args = append(args, "--files", ConfigurationsPath+"/data-transformers/"+SUTName+".data-transformers.yml")
+	configFilePath := getConfigFilePath(SUTVersion, SUTName, "data-transformers.configuration.yml")
+	if configFilePath != "" {
+		args = append(args, "--files", configFilePath)
+	}
 	args = append(args, s.Script)
 	transformerArguments := TransformerArguments{}
 	transformerArguments.Cassandra_keyspace = CassandraKeyspace
@@ -38,8 +64,7 @@ func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 	transformerArguments.Minio_host = MinioHost
 	transformerArguments.Minio_port = MinioPort
 	transformerArguments.Minio_secret_key = MinioSecretKey
-	transformerArguments.SUT_Name = SUTName
-	transformerArguments.SUT_Version = SUTVersion
+	transformerArguments.Config_file = "data-transformers.configuration.yml"
 	transformerArguments.Trial_ID = msg.Trial_id
 	jsonArg, _ := json.Marshal(transformerArguments)
 	args = append(args, string(jsonArg))
@@ -50,7 +75,11 @@ func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, SUTVersion string, containerID string, hostID string) []string {
 	var args []string
 	args = constructSparkArguments()
-	args = append(args, "--files", ConfigurationsPath+"/analysers/"+SUTName+".analysers.yml")
+	// This is disabled since we don't have analyser configurations for now
+	//configFilePath := getConfigFilePath(SUTVersion, SUTName, "analysers.configuration.yml")
+	//if configFilePath != "" {
+	//	args = append(args, "--files", configFilePath)
+	//}
 	args = append(args, "--py-files", AnalysersPath+"/commons/commons.py,"+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
 	args = append(args, script)
 	analyserArguments := AnalyserArguments{}
@@ -58,8 +87,7 @@ func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID 
 	analyserArguments.Container_ID = containerID
 	analyserArguments.Experiment_ID = experimentID
 	analyserArguments.Host_ID = hostID
-	analyserArguments.SUT_Name = SUTName
-	analyserArguments.SUT_Version = SUTVersion
+	analyserArguments.Config_file = "analysers.configuration.yml"
 	analyserArguments.Trial_ID = trialID
 	jsonArg, _ := json.Marshal(analyserArguments)
 	args = append(args, string(jsonArg))

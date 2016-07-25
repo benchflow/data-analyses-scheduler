@@ -19,7 +19,7 @@ alluxio_port: "19998"
 pyspark_cassandra_version: "0.3.5"
 analysers_path: "/app/analysers"
 transformers_path: "/app/data-transformers"
-configurations_path: "/app/configuration"
+configurations_path: "/app/data-transformers/suts/wfms"
 benchmarks_config_bucket: "benchmarks"
 benchmarks_config_name: "benchflow-benchmark.yml"
 transformer_workers: 4
