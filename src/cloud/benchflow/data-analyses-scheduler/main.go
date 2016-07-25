@@ -46,7 +46,10 @@ func main() {
 	PysparkCassandraVersion = viper.GetString("pyspark_cassandra_version")
 	AnalysersPath = viper.GetString("analysers_path")
 	TransformersPath = viper.GetString("transformers_path")
-	ConfigurationsPath = viper.GetString("configurations_path")
+	TransformersConfigurationsPath = viper.GetString("transformers_configurations_path")
+	TransformersConfigurationFileName = viper.GetString("transformers_configuration_file_name")
+	AnalysersConfigurationsPath = viper.GetString("analysers_configurations_path")
+	AnalysersConfigurationFileName = viper.GetString("analysers_configuration_file_name")
 	BenchmarksConfigBucket = viper.GetString("benchmarks_config_bucket")
 	BenchmarksConfigName = viper.GetString("benchmarks_config_name")
 	

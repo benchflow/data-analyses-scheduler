@@ -50,7 +50,10 @@ var Alluxio_port string
 var PysparkCassandraVersion string
 var AnalysersPath string
 var TransformersPath string
-var ConfigurationsPath string
+var TransformersConfigurationsPath string
+var TransformersConfigurationFileName string
+var AnalysersConfigurationsPath string
+var AnalysersConfigurationFileName string
 var BenchmarksConfigBucket string
 var BenchmarksConfigName string
 

@@ -8,20 +8,22 @@ import (
 )
 
 // Function to resolve the correct configuration file path based on the SUT Name and Version
-func getConfigFilePath(SUTVersion string, SUTName string, fileName string) string {
+func getConfigFilePath(SUTVersion string, SUTName string, SUTType string, fileName string) string {
+	// Split the version into 3 numbers (eg. 1.0.2 -> [1 0 2])
 	versionNums := strings.Split(SUTVersion, ".")
-	dirs, _ := ioutil.ReadDir(ConfigurationsPath+"/"+SUTName)
+	dirs, _ := ioutil.ReadDir(TransformersConfigurationsPath+"/"+SUTName)
+	// Iterate over the dirs, finds the one for the version passed to the function, either a perfect match or matching a range (eg. 1.2.0-1.4.0 for 1.3.0)
     for _, dir := range dirs {
     	dirName := dir.Name()
     	if dirName == SUTVersion {
-    		return ConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
+    		return TransformersConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
 		}
     	vRange := strings.Split(dirName, "-")
     	if len(vRange) == 2 {
     		vNumsRangeLow := strings.Split(vRange[0], ".")
     		vNumsRangeHigh := strings.Split(vRange[1], ".")
     		if versionNums[0] >= vNumsRangeLow[0] && versionNums[0] <= vNumsRangeHigh[0] && versionNums[1] >= vNumsRangeLow[1] && versionNums[1] <= vNumsRangeHigh[1] && versionNums[2] >= vNumsRangeLow[2] && versionNums[2] <= vNumsRangeHigh[2] {
-    			return ConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
+    			return TransformersConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
     		}
 		}
     }
@@ -44,11 +46,11 @@ func constructSparkArguments() []string {
 }
 
 // Function that constructs and returns the arguments for a spark-submit command for a transformer script
-func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string, SUTName string, SUTVersion string) []string {
+func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string, SUTName string, SUTVersion string, SUTType string) []string {
 	var args []string
 	args = constructSparkArguments()
 	args = append(args, "--py-files", TransformersPath+"/commons/commons.py"+","+TransformersPath+"/transformations/dataTransformations.py"+","+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
-	configFilePath := getConfigFilePath(SUTVersion, SUTName, "data-transformers.configuration.yml")
+	configFilePath := getConfigFilePath(SUTVersion, SUTName, SUTType, "data-transformers.configuration.yml")
 	if configFilePath != "" {
 		args = append(args, "--files", configFilePath)
 	}
@@ -64,7 +66,7 @@ func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 	transformerArguments.Minio_host = MinioHost
 	transformerArguments.Minio_port = MinioPort
 	transformerArguments.Minio_secret_key = MinioSecretKey
-	transformerArguments.Config_file = "data-transformers.configuration.yml"
+	transformerArguments.Config_file = TransformersConfigurationFileName
 	transformerArguments.Trial_ID = msg.Trial_id
 	jsonArg, _ := json.Marshal(transformerArguments)
 	args = append(args, string(jsonArg))
@@ -87,7 +89,7 @@ func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID 
 	analyserArguments.Container_ID = containerID
 	analyserArguments.Experiment_ID = experimentID
 	analyserArguments.Host_ID = hostID
-	analyserArguments.Config_file = "analysers.configuration.yml"
+	analyserArguments.Config_file = AnalysersConfigurationFileName
 	analyserArguments.Trial_ID = trialID
 	jsonArg, _ := json.Marshal(analyserArguments)
 	args = append(args, string(jsonArg))
