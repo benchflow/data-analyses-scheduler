@@ -11,19 +11,19 @@ import (
 func getConfigFilePath(SUTVersion string, SUTName string, SUTType string, fileName string) string {
 	// Split the version into 3 numbers (eg. 1.0.2 -> [1 0 2])
 	versionNums := strings.Split(SUTVersion, ".")
-	dirs, _ := ioutil.ReadDir(TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName)
+	dirs, _ := ioutil.ReadDir(AppPath+"/"+TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName)
 	// Iterate over the dirs, finds the one for the version passed to the function, either a perfect match or matching a range (eg. 1.2.0-1.4.0 for 1.3.0)
     for _, dir := range dirs {
     	dirName := dir.Name()
     	if dirName == SUTVersion {
-    		return TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName+"/"+dirName+"/"+fileName
+    		return AppPath+"/"+TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName+"/"+dirName+"/"+fileName
 		}
     	vRange := strings.Split(dirName, "-")
     	if len(vRange) == 2 {
     		vNumsRangeLow := strings.Split(vRange[0], ".")
     		vNumsRangeHigh := strings.Split(vRange[1], ".")
     		if versionNums[0] >= vNumsRangeLow[0] && versionNums[0] <= vNumsRangeHigh[0] && versionNums[1] >= vNumsRangeLow[1] && versionNums[1] <= vNumsRangeHigh[1] && versionNums[2] >= vNumsRangeLow[2] && versionNums[2] <= vNumsRangeHigh[2] {
-    			return TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName+"/"+dirName+"/"+fileName
+    			return AppPath+"/"+TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName+"/"+dirName+"/"+fileName
     		}
 		}
     }
@@ -49,12 +49,12 @@ func constructSparkArguments() []string {
 func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string, SUTName string, SUTVersion string, SUTType string) []string {
 	var args []string
 	args = constructSparkArguments()
-	args = append(args, "--py-files", TransformersPath+"/commons/commons.py"+","+TransformersPath+"/transformations/dataTransformations.py"+","+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
+	args = append(args, "--py-files", AppPath+"/"+TransformersPath+"/commons/commons.py"+","+TransformersPath+"/transformations/dataTransformations.py"+","+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
 	configFilePath := getConfigFilePath(SUTVersion, SUTName, SUTType, "data-transformers.configuration.yml")
 	if configFilePath != "" {
 		args = append(args, "--files", configFilePath)
 	}
-	args = append(args, s.Script)
+	args = append(args, AppPath+"/"+s.Script)
 	transformerArguments := TransformerArguments{}
 	transformerArguments.Cassandra_keyspace = CassandraKeyspace
 	transformerArguments.Container_ID = msg.Container_id
@@ -82,8 +82,8 @@ func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID 
 	//if configFilePath != "" {
 	//	args = append(args, "--files", configFilePath)
 	//}
-	args = append(args, "--py-files", AnalysersPath+"/commons/commons.py,"+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
-	args = append(args, script)
+	args = append(args, "--py-files", AppPath+"/"+AnalysersPath+"/commons/commons.py,"+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
+	args = append(args, AppPath+"/"+script)
 	analyserArguments := AnalyserArguments{}
 	analyserArguments.Cassandra_keyspace = CassandraKeyspace
 	analyserArguments.Container_ID = containerID

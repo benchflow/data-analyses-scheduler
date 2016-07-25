@@ -16,7 +16,7 @@ import (
 func main() {
 	// Settings for viper
 	viper.SetConfigName("configuration")
-	viper.AddConfigPath("/app/")
+	viper.AddConfigPath(AppPath+"/")
 	viper.AddConfigPath("./")
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig()
@@ -44,6 +44,7 @@ func main() {
 	SparkPort = viper.GetString("spark_port")
 	Alluxio_port = viper.GetString("alluxio_port")
 	PysparkCassandraVersion = viper.GetString("pyspark_cassandra_version")
+	AppPath = viper.GetString("app_path")
 	AnalysersPath = viper.GetString("analysers_path")
 	TransformersPath = viper.GetString("transformers_path")
 	TransformersConfigurationsPath = viper.GetString("transformers_configurations_path")

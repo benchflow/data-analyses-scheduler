@@ -48,6 +48,7 @@ var SparkMaster string
 var SparkPort string
 var Alluxio_port string
 var PysparkCassandraVersion string
+var AppPath string
 var AnalysersPath string
 var TransformersPath string
 var TransformersConfigurationsPath string
