@@ -48,9 +48,13 @@ var SparkMaster string
 var SparkPort string
 var Alluxio_port string
 var PysparkCassandraVersion string
+var AppPath string
 var AnalysersPath string
 var TransformersPath string
-var ConfigurationsPath string
+var TransformersConfigurationsPath string
+var TransformersConfigurationFileName string
+var AnalysersConfigurationsPath string
+var AnalysersConfigurationFileName string
 var BenchmarksConfigBucket string
 var BenchmarksConfigName string
 
@@ -111,8 +115,7 @@ type TransformerArguments struct {
     File_path string `json:"file_path"`
     Trial_ID string `json:"trial_id"`
     Experiment_ID string `json:"experiment_id"`
-    SUT_Name string `json:"sut_name"`
-    SUT_Version string `json:"sut_version"`
+    Config_file string `json:"config_file"`
     Container_ID string `json:"container_id"`
     Host_ID string `json:"host_id"`
 	}
@@ -121,8 +124,7 @@ type AnalyserArguments struct {
 	Cassandra_keyspace string `json:"cassandra_keyspace"`
     Trial_ID string `json:"trial_id"`
     Experiment_ID string `json:"experiment_id"`
-    SUT_Name string `json:"sut_name"`
-    SUT_Version string `json:"sut_version"`
+    Config_file string `json:"config_file"`
     Container_ID string `json:"container_id"`
     Host_ID string `json:"host_id"`
 	}

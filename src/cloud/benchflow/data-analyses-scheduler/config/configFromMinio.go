@@ -8,10 +8,11 @@ import (
 )
 
 // Retrieve the benchmarking configuration from Minio
-func TakeBenchmarkConfigFromMinio(experimentID string) (int, string, string) {
+func TakeBenchmarkConfigFromMinio(experimentID string) (int, string, string, string) {
 	type SutStruct struct {
 		Name string `yaml:"name"` 
 		Version string `yaml:"version"`
+		Type string `yaml:"type"`
 	}
 	type BenchmarkConfig struct {
 		Trials int `yaml:"trials"`
@@ -56,7 +57,8 @@ func TakeBenchmarkConfigFromMinio(experimentID string) (int, string, string) {
 	numOfTrials := benchmarkConfig.Trials
 	SUTName := benchmarkConfig.Sut.Name
 	SUTVersion := benchmarkConfig.Sut.Version
+	SUTType := benchmarkConfig.Sut.Type
 	
-	return numOfTrials, SUTName, SUTVersion
+	return numOfTrials, SUTName, SUTVersion, SUTType
 }
 
