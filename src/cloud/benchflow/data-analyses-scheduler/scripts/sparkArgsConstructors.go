@@ -11,19 +11,19 @@ import (
 func getConfigFilePath(SUTVersion string, SUTName string, SUTType string, fileName string) string {
 	// Split the version into 3 numbers (eg. 1.0.2 -> [1 0 2])
 	versionNums := strings.Split(SUTVersion, ".")
-	dirs, _ := ioutil.ReadDir(TransformersConfigurationsPath+"/"+SUTName)
+	dirs, _ := ioutil.ReadDir(TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName)
 	// Iterate over the dirs, finds the one for the version passed to the function, either a perfect match or matching a range (eg. 1.2.0-1.4.0 for 1.3.0)
     for _, dir := range dirs {
     	dirName := dir.Name()
     	if dirName == SUTVersion {
-    		return TransformersConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
+    		return TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName+"/"+dirName+"/"+fileName
 		}
     	vRange := strings.Split(dirName, "-")
     	if len(vRange) == 2 {
     		vNumsRangeLow := strings.Split(vRange[0], ".")
     		vNumsRangeHigh := strings.Split(vRange[1], ".")
     		if versionNums[0] >= vNumsRangeLow[0] && versionNums[0] <= vNumsRangeHigh[0] && versionNums[1] >= vNumsRangeLow[1] && versionNums[1] <= vNumsRangeHigh[1] && versionNums[2] >= vNumsRangeLow[2] && versionNums[2] <= vNumsRangeHigh[2] {
-    			return TransformersConfigurationsPath+"/"+SUTName+"/"+dirName+"/"+fileName
+    			return TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName+"/"+dirName+"/"+fileName
     		}
 		}
     }
