@@ -7,10 +7,18 @@ ENV SPARK_VERSION 1.6.2
 ENV PYSPARK_PYTHON python2.7
 ENV PYSPARK_CASSANDRA_VERSION 0.3.5
 ENV HADOOP_VERSION 2.6
+ENV GLIBC_VERSION=2.23-r3
+ENV LANG=C.UTF-8
+ENV MINICONDA_PYTHON_VERSION=2
+ENV MINICONDA_VERSION=4.0.5
 ENV DATA_ANALYSES_SCHEDULER_VERSION v-dev
 ENV DATA_TRANSFORMERS_VERSION v-dev
 ENV ANALYSERS_VERSION v-dev
 ENV PLUGINS_VERSION v-dev
+
+# Configure environment for miniconda
+ENV CONDA_DIR=/opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
 
 # TODO: remove python, when Spark will be used outside of the container
 # TODO: Improve the following code to download only once from github and keep all the wanted files in the right directories
@@ -72,9 +80,33 @@ COPY ./services/400-clean-tmp-folder.conf /apps/chaperone.d/400-clean-tmp-folder
 RUN cp $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf \
     && sed -i -e '$aspark.ui.enabled false' $SPARK_HOME/conf/spark-defaults.conf
 
-# adds Alpine's testing repository and install scripts dependencies (py-numpy, py-scipy, py-yaml)
-RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \
-    && apk --update add py-numpy@testing py-scipy@testing py-yaml py-dateutil
+# Install miniconda and scipy though it, to solve a linking error with scipy (refer to: https://travis-ci.org/benchflow/analysers/builds/147443000#L485)
+# Reference for miniconda setup: https://github.com/CognitiveScale/alpine-miniconda/blob/conda-4.0.5/Dockerfile
+RUN apk upgrade --update && \
+    # Install glibc and other dependencies needed by miniconda
+    apk add --update curl ca-certificates bash git bzip2 unzip sudo libstdc++ glib libxext libxrender && \
+    for pkg in glibc-${GLIBC_VERSION} glibc-bin-${GLIBC_VERSION} glibc-i18n-${GLIBC_VERSION}; do curl -sSL https://github.com/andyshinn/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/${pkg}.apk -o /tmp/${pkg}.apk; done && \
+    apk add --allow-untrusted /tmp/*.apk && \
+    rm -v /tmp/*.apk && \
+    ( /usr/glibc-compat/bin/localedef --force --inputfile POSIX --charmap UTF-8 C.UTF-8 || true ) && \
+    echo "export LANG=C.UTF-8" > /etc/profile.d/locale.sh && \
+    /usr/glibc-compat/sbin/ldconfig /lib /usr/glibc-compat/lib && \
+    # Install miniconda
+    mkdir -p $CONDA_DIR && \
+    echo export PATH=$CONDA_DIR/bin:'$PATH' > /etc/profile.d/conda.sh && \
+    curl https://repo.continuum.io/miniconda/Miniconda${MINICONDA_PYTHON_VERSION}-${MINICONDA_VERSION}-Linux-x86_64.sh  -o mconda.sh && \
+    /bin/bash mconda.sh -f -b -p $CONDA_DIR && \
+    rm mconda.sh && \
+    $CONDA_DIR/bin/conda install --yes conda==${MINICONDA_VERSION} && \
+    # Install scipy using miniconda
+    conda install scipy && \
+    conda install pytz && \
+    # TODO: evaluate if possible to remove miniconda and its dependencies (git, bzip2, unzip, sudo, libstdc++, glib, libxext, libxrender) at this point
+    apk del glibc-i18n
+
+# adds Alpine's testing repository and install scripts dependencies (py-numpy, py-yaml)
+RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \    
+    && apk --update add py-numpy@testing py-yaml py-dateutil
 
 # adds pip and install scripts dependencies (future)
 RUN apk --update add py-pip \

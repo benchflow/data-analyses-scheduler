@@ -63,10 +63,9 @@ test:
 build_container:
 	docker build -t $(DOCKERIMAGENAME):$(VERSION) -f Dockerfile .
 
-build_container_local:
-	GOPATH=$(GOPATH_SAVE_RESTORE) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 godep go build -ldflags '-s' -o bin/$(REPONAME)_linux -v ./...
+build_container_local: build_release install_release
+	GOPATH=$(GOPATH_SAVE_RESTORE) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 godep go build -ldflags '-s' -v ./...
 	docker build -t $(DOCKERIMAGENAME):$(VERSION) -f Dockerfile.test .
-	rm bin/$(REPONAME)_linux
 
 test_container_local:
 	docker run -d -p 8080:8080 \
