@@ -51,8 +51,8 @@ func main() {
 	TransformersConfigurationFileName = viper.GetString("transformers_configuration_file_name")
 	AnalysersConfigurationsPath = viper.GetString("analysers_configurations_path")
 	AnalysersConfigurationFileName = viper.GetString("analysers_configuration_file_name")
-	BenchmarksConfigBucket = viper.GetString("benchmarks_config_bucket")
-	BenchmarksConfigName = viper.GetString("benchmarks_config_name")
+	TestsConfigBucket = viper.GetString("tests_config_bucket")
+	TestsConfigName = viper.GetString("tests_config_name")
 	
 	NTransformerWorkers = viper.GetInt("transformer_workers")
 	NAnalyserWorkers = viper.GetInt("analyser_workers")

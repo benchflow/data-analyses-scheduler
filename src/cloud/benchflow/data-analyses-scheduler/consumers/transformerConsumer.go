@@ -52,7 +52,7 @@ func StartDataTransformerConsumer(t TransformerSetting) {
 				fmt.Println("Received invalid json: " + string(m.Value))
 				continue
 				}
-			numOfTrials, SUTName, SUTVersion, SUTType := config.TakeBenchmarkConfigFromMinio(msg.Experiment_id)
+			numOfTrials, SUTName, SUTVersion, SUTType := config.TakeTestConfigFromMinio(msg.Experiment_id)
 			minioKeys := strings.Split(msg.Minio_key, ",")
 			containerIds := strings.Split(msg.Container_id, ",")
 			for i, k := range minioKeys {

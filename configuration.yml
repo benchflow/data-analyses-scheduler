@@ -24,7 +24,7 @@ transformers_configurations_path: "data-transformers/suts"
 transformers_configuration_file_name: "data-transformers.configuration.yml"
 analysers_configurations_path: "analysers/suts"
 analysers_configuration_file_name: "analysers.configuration.yml"
-benchmarks_config_bucket: "benchmarks"
-benchmarks_config_name: "benchflow-benchmark.yml"
+tests_config_bucket: "tests"
+tests_config_name: "benchflow-test.yml"
 transformer_workers: 4
 analyser_workers: 4

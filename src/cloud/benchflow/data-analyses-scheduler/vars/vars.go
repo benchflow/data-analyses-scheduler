@@ -55,8 +55,8 @@ var TransformersConfigurationsPath string
 var TransformersConfigurationFileName string
 var AnalysersConfigurationsPath string
 var AnalysersConfigurationFileName string
-var BenchmarksConfigBucket string
-var BenchmarksConfigName string
+var TestsConfigBucket string
+var TestsConfigName string
 
 var NTransformerWorkers int
 var NAnalyserWorkers int
