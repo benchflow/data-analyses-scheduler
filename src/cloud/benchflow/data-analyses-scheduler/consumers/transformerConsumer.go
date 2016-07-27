@@ -55,13 +55,15 @@ func StartDataTransformerConsumer(t TransformerSetting) {
 			numOfTrials, SUTName, SUTVersion, SUTType := config.TakeTestConfigFromMinio(msg.Experiment_id)
 			minioKeys := strings.Split(msg.Minio_key, ",")
 			containerIds := strings.Split(msg.Container_id, ",")
+			containerNames := strings.Split(msg.Container_name, ",")
 			for i, k := range minioKeys {
 				for _, s := range t.Scripts {
 					fmt.Println(t.Topic+" topic, submitting script "+string(s.Script)+", minio location: "+k+", trial id: "+msg.Trial_id)
 					containerID := containerIds[i]
+					containerName := containerNames[i]
 					hostID := msg.Host_id
 					args := scripts.ConstructTransformerSubmitArguments(s, msg, containerID, hostID, SUTName, SUTVersion, SUTType)
-					dispatchers.TransformerWorkQueue <- WorkRequest{SparkArgs: args, Script: s.Script, ScriptName: t.Topic, Topic: t.Topic, TrialID: msg.Trial_id, ExperimentID: msg.Experiment_id, ContainerID: msg.Container_id, HostID: msg.Host_id, SUTName: SUTName, SUTVersion: SUTVersion, TotalTrialsNum: numOfTrials, CollectorName: msg.Collector_name, Level: "trial"}
+					dispatchers.TransformerWorkQueue <- WorkRequest{SparkArgs: args, Script: s.Script, ScriptName: t.Topic, Topic: t.Topic, TrialID: msg.Trial_id, ExperimentID: msg.Experiment_id, ContainerID: containerID, ContainerName: containerName, HostID: msg.Host_id, SUTName: SUTName, SUTVersion: SUTVersion, TotalTrialsNum: numOfTrials, CollectorName: msg.Collector_name, Level: "trial"}
   					fmt.Println("Transformer work request queued")
 					}
 				}

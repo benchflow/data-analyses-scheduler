@@ -101,6 +101,7 @@ type KafkaMessage struct {
 	Trial_id string `json:"trial_id"`
 	Experiment_id string `json:"experiment_id"`
 	Container_id string `json:"container_id"`
+	Container_name string `json:"container_name"`
 	Host_id string `json:"host_id"`
 	Collector_name string `json:"collector_name"`
 	}
@@ -126,6 +127,7 @@ type AnalyserArguments struct {
     Experiment_ID string `json:"experiment_id"`
     Config_file string `json:"config_file"`
     Container_ID string `json:"container_id"`
+    Container_name string `json:"container_name"`
     Host_ID string `json:"host_id"`
 	}
 
@@ -138,6 +140,7 @@ type WorkRequest struct {
   TrialID  string
   ExperimentID string
   ContainerID string
+  ContainerName string
   HostID string
   SUTName string
   SUTVersion string

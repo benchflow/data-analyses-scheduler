@@ -74,7 +74,7 @@ func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 }
 
 // Function that constructs the arguments for a spark-submit comand for an analyser script
-func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, SUTVersion string, containerID string, hostID string) []string {
+func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID string, experimentID string, SUTName string, SUTVersion string, containerID string, containerName string, hostID string) []string {
 	var args []string
 	args = constructSparkArguments()
 	// This is disabled since we don't have analyser configurations for now
@@ -87,6 +87,7 @@ func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID 
 	analyserArguments := AnalyserArguments{}
 	analyserArguments.Cassandra_keyspace = CassandraKeyspace
 	analyserArguments.Container_ID = containerID
+	analyserArguments.Container_name = containerName
 	analyserArguments.Experiment_ID = experimentID
 	analyserArguments.Host_ID = hostID
 	analyserArguments.Config_file = AnalysersConfigurationFileName

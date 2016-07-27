@@ -34,8 +34,8 @@ func submitWorksThatMeetReqs(request WorkRequest, r string, analyserScripts []An
 	if reqMet {
 		fmt.Println("All requirements met for: "+r)
 		for _, sc := range analyserScripts {
-			args := scripts.ConstructAnalyserSubmitArguments(sc.ScriptName, sc.TrialScript, request.TrialID, request.ExperimentID, request.SUTName, request.SUTVersion, request.ContainerID, request.HostID)
-			dispatchers.AnalyserWorkQueue <- WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.TrialScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "trial"}
+			args := scripts.ConstructAnalyserSubmitArguments(sc.ScriptName, sc.TrialScript, request.TrialID, request.ExperimentID, request.SUTName, request.SUTVersion, request.ContainerID, request.ContainerName, request.HostID)
+			dispatchers.AnalyserWorkQueue <- WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.TrialScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, ContainerName: request.ContainerName, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "trial"}
   			fmt.Println("Analyser work request queued")
 		}
 	}
@@ -44,13 +44,13 @@ func submitWorksThatMeetReqs(request WorkRequest, r string, analyserScripts []An
 // Submit the work when trial counter of a script matches the total num of trials for an experiment
 func submitWorksThatMeetTrialCount(request WorkRequest, r string, analyserScripts []AnalyserScript) {
 	for _, sc := range analyserScripts {
-		counterId := scripts.GetCounterID(request.ExperimentID, sc.ScriptName, request.ContainerID, request.HostID, request.CollectorName)
+		counterId := scripts.GetCounterID(request.ExperimentID, sc.ScriptName, request.ContainerName, request.HostID, request.CollectorName)
 		i, ok := TrialCount.Get(counterId)
 		if ok && i.(int) == request.TotalTrialsNum {
 			TrialCount.Remove(counterId)
 			fmt.Printf("All trials "+sc.TrialScript+" for experiment "+request.ExperimentID+" completed")
-			args := scripts.ConstructAnalyserSubmitArguments(sc.ScriptName, sc.ExperimentScript, request.TrialID, request.ExperimentID, request.SUTName, request.SUTVersion, request.ContainerID, request.HostID)
-			dispatchers.AnalyserWorkQueue <- WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.ExperimentScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "experiment"}
+			args := scripts.ConstructAnalyserSubmitArguments(sc.ScriptName, sc.ExperimentScript, request.TrialID, request.ExperimentID, request.SUTName, request.SUTVersion, request.ContainerID, request.ContainerName, request.HostID)
+			dispatchers.AnalyserWorkQueue <- WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.ExperimentScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, ContainerName: request.ContainerName, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "experiment"}
   			fmt.Println("Analyser work request queued")
 		}
 	}
