@@ -64,6 +64,6 @@ func IsExperimentComplete(experimentID string) bool{
 }
 
 // Function that generates the key for the trial counter map
-func GetCounterID(experimentID string, scriptName string, containerID string, hostID string, collectorName string) string {
-	return experimentID+"_"+scriptName+"_"+containerID+"_"+hostID+"_"+collectorName
+func GetCounterID(experimentID string, scriptName string, containerName string, hostID string, collectorName string) string {
+	return experimentID+"_"+scriptName+"_"+containerName+"_"+hostID+"_"+collectorName
 }
