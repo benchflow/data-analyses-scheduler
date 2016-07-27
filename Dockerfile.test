@@ -105,12 +105,13 @@ RUN apk upgrade --update && \
     # Install scipy using miniconda
     conda install scipy && \
     conda install pytz && \
+    conda install -c anaconda dateutil=2.4.1 && \
     # TODO: evaluate if possible to remove miniconda and its dependencies (git, bzip2, unzip, sudo, libstdc++, glib, libxext, libxrender) at this point
     apk del glibc-i18n
 
 # adds Alpine's testing repository and install scripts dependencies (py-numpy, py-yaml)
 RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \    
-    && apk --update add py-numpy@testing py-yaml py-dateutil
+    && apk --update add py-numpy@testing py-yaml
 
 # adds pip and install scripts dependencies (future)
 RUN apk --update add py-pip \
