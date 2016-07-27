@@ -58,7 +58,7 @@ func main() {
 	NAnalyserWorkers = viper.GetInt("analyser_workers")
 	
 	// Getting dependencies configuration and unmarshaling in defined structures
-	dat, err := ioutil.ReadFile("./configuration/analyser-scripts-configuration.yml")
+	dat, err := ioutil.ReadFile("./configuration/analysers.scheduler.configuration.yml")
     if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func main() {
 		panic(err)
 	}
 	
-	dat, err = ioutil.ReadFile("./configuration/data-transformer-scripts-configuration.yml")
+	dat, err = ioutil.ReadFile("./configuration/data-transformers.scheduler.configuration.yml")
     if err != nil {
 		panic(err)
 	}
