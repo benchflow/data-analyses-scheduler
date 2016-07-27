@@ -54,7 +54,7 @@ func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 	if configFilePath != "" {
 		args = append(args, "--files", configFilePath)
 	}
-	args = append(args, AppPath+"/"+s.Script)
+	args = append(args, AppPath+"/"+TransformersPath+"/"+s.Script)
 	transformerArguments := TransformerArguments{}
 	transformerArguments.Cassandra_keyspace = CassandraKeyspace
 	transformerArguments.Container_ID = msg.Container_id
@@ -83,7 +83,7 @@ func ConstructAnalyserSubmitArguments(scriptName string, script string, trialID 
 	//	args = append(args, "--files", configFilePath)
 	//}
 	args = append(args, "--py-files", AppPath+"/"+AnalysersPath+"/commons/commons.py,"+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
-	args = append(args, AppPath+"/"+script)
+	args = append(args, AppPath+"/"+AnalysersPath+"/"+script)
 	analyserArguments := AnalyserArguments{}
 	analyserArguments.Cassandra_keyspace = CassandraKeyspace
 	analyserArguments.Container_ID = containerID
