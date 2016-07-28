@@ -8,7 +8,7 @@ import (
 )
 
 // Retrieve the test configuration from Minio
-func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, bool) {
+func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, error) {
 	type SutStruct struct {
 		Name string `yaml:"name"` 
 		Version string `yaml:"version"`
@@ -27,7 +27,7 @@ func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, 
     // Initialize minio client object.
 	minioClient, err := minio.New(MinioHost+":"+MinioPort, MinioAccessKey, MinioSecretKey, ssl)
 	if err != nil {
-    	return 0, "", "", "", true
+    	return 0, "", "", "", err
 	}
 	
 	// Path of the file
@@ -36,13 +36,13 @@ func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, 
 	// Get object info
 	objInfo, err := minioClient.StatObject(TestsConfigBucket, path+"/"+TestsConfigName)
 	if err != nil {
-	    return 0, "", "", "", true
+	    return 0, "", "", "", err
 	}
 	
 	// Get object
 	object, err := minioClient.GetObject(TestsConfigBucket, path+"/"+TestsConfigName)
 	if err != nil {
-	    return 0, "", "", "", true
+	    return 0, "", "", "", err
 	}
 	dat := make([]byte, objInfo.Size)
 	object.Read(dat)
@@ -50,7 +50,7 @@ func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, 
     // Unmarshal yaml
 	err = yaml.Unmarshal(dat, &testConfig)
 	if err != nil {
-		return 0, "", "", "", true
+		return 0, "", "", "", err
 	}
 	
 	// Return values we need
@@ -59,6 +59,6 @@ func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, 
 	SUTVersion := testConfig.Sut.Version
 	SUTType := testConfig.Sut.Type
 	
-	return numOfTrials, SUTName, SUTVersion, SUTType, false
+	return numOfTrials, SUTName, SUTVersion, SUTType, err
 }
 
