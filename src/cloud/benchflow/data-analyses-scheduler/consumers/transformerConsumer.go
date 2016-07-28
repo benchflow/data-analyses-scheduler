@@ -50,9 +50,15 @@ func StartDataTransformerConsumer(t TransformerSetting) {
 			err := json.Unmarshal(m.Value, &msg)
 			if err != nil {
 				fmt.Println("Received invalid json: " + string(m.Value))
+				consumer.CommitUpto(m)
 				continue
 				}
-			numOfTrials, SUTName, SUTVersion, SUTType := config.TakeTestConfigFromMinio(msg.Experiment_id)
+			numOfTrials, SUTName, SUTVersion, SUTType, errored := config.TakeTestConfigFromMinio(msg.Experiment_id)
+			if errored {
+				fmt.Println("Cannot retrieve benchflow file from Minio for experiment "+msg.Experiment_id)
+				consumer.CommitUpto(m)
+				continue
+			}
 			minioKeys := strings.Split(msg.Minio_key, ",")
 			containerIds := strings.Split(msg.Container_id, ",")
 			containerNames := strings.Split(msg.Container_name, ",")
