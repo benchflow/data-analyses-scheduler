@@ -53,9 +53,10 @@ func StartDataTransformerConsumer(t TransformerSetting) {
 				consumer.CommitUpto(m)
 				continue
 				}
-			numOfTrials, SUTName, SUTVersion, SUTType, errored := config.TakeTestConfigFromMinio(msg.Experiment_id)
-			if errored {
+			numOfTrials, SUTName, SUTVersion, SUTType, err := config.TakeTestConfigFromMinio(msg.Experiment_id)
+			if err != nil {
 				fmt.Println("Cannot retrieve benchflow file from Minio for experiment "+msg.Experiment_id)
+				fmt.Println(err)
 				consumer.CommitUpto(m)
 				continue
 			}
