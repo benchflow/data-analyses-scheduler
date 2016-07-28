@@ -22,7 +22,7 @@ func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, 
 	var testConfig TestConfig
 	
 	// Use a secure connection.
-    ssl := false
+    ssl := MinioSSL
 	
     // Initialize minio client object.
 	minioClient, err := minio.New(MinioHost+":"+MinioPort, MinioAccessKey, MinioSecretKey, ssl)
