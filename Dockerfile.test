@@ -17,7 +17,7 @@ ENV ANALYSERS_VERSION v-dev
 ENV PLUGINS_VERSION v-dev
 
 ENV REGULAR_PYTHON /usr/bin/python2.7
-ENV CONDA_PYTHON /opt/conda/python2.7
+ENV CONDA_PYTHON /opt/conda/bin/python2.7
 
 # Configure environment for miniconda
 ENV CONDA_DIR=/opt/conda
