@@ -9,10 +9,32 @@ import (
 	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
+// Copies the environment and alters the PYSPARK_PYTHON var to use the correct python path
+func getCustomEnvironment(script string) []string {
+	pythonPath := ""
+	if strings.Contains(script, "analysers") {
+		pythonPath = os.Getenv("CONDA_PYTHON")
+	} else if strings.Contains(script, "data-transformers") {
+		pythonPath = os.Getenv("REGULAR_PYTHON")
+	}
+	fmt.Println(os.Getenv("PATH"))
+	env := os.Environ()
+	for i, e := range(env) {
+		if strings.Contains(e, "PYSPARK_PYTHON") {
+			env = append(env[:i], env[i+1:]...)
+			break
+		}	
+	}
+	env = append(env, fmt.Sprintf("PYSPARK_PYTHON=%s", pythonPath))
+	return env
+}
+
 // Function that submits a script with spark-submit and checks the output for errors
 func SubmitScript(args []string, script string) bool {
 	retries := 0
+	env := getCustomEnvironment(script)
 	cmd := exec.Command(SparkHome+"/bin/spark-submit", args...)
+	cmd.Env = env
 	for retries < 3 {
 		retries += 1
 		cmd.Stdout = os.Stdout

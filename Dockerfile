@@ -16,6 +16,9 @@ ENV DATA_TRANSFORMERS_VERSION v-dev
 ENV ANALYSERS_VERSION v-dev
 ENV PLUGINS_VERSION v-dev
 
+ENV REGULAR_PYTHON /usr/bin/python2.7
+ENV CONDA_PYTHON /opt/conda/python2.7
+
 # Configure environment for miniconda
 ENV CONDA_DIR=/opt/conda
 ENV PATH=$CONDA_DIR/bin:$PATH
@@ -107,13 +110,13 @@ RUN apk upgrade --update && \
 
 # adds Alpine's testing repository and install scripts dependencies (py-numpy, py-yaml)
 RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \    
-    && apk --update add py-numpy@testing py-yaml
+    && apk --update add py-numpy@testing py-scipy@testing py-yaml py-dateutil
 
 # adds pip and install scripts dependencies (future)
 RUN apk --update add py-pip \
     && pip install --upgrade pip \
-    && pip install future \
-    && pip install minio \
+    && ${REGULAR_PYTHON} /usr/bin/pip install future \
+    && ${REGULAR_PYTHON} /usr/bin/pip install minio \
     && apk del --purge py-pip \
     && rm -rf /var/cache/apk/*
  
