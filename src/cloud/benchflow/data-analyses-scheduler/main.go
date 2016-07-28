@@ -36,6 +36,7 @@ func main() {
 	AckWaitTimeout = viper.GetString("ack_wait_timeout")
 	MinioHost = viper.GetString("minio_host")
 	MinioPort = viper.GetString("minio_port")
+	MinioSSL = viper.GetBool("minio_ssl")
 	MinioAccessKey = viper.GetString("minio_access_key")
 	MinioSecretKey = viper.GetString("minio_secret_key")
 	RunsBucket = viper.GetString("runs_bucket")

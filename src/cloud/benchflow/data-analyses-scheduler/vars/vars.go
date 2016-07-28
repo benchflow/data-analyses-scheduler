@@ -35,6 +35,7 @@ var KafkaPort string
 var CassandraHost string
 var MinioHost string
 var MinioPort string
+var MinioSSL bool
 var MinioAccessKey string
 var MinioSecretKey string
 var RunsBucket string

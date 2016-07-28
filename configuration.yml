@@ -4,6 +4,7 @@ kafka_port: "2181"
 cassandra_host: "cassandra"
 minio_host: "minio"
 minio_port: "9000"
+minio_ssl: true
 minio_access_key: "AKIAIOSFODNN7EXAMPLE"
 minio_secret_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 runs_bucket: "runs"
