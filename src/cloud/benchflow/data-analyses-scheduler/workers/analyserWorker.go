@@ -41,7 +41,7 @@ func (w *AnalyserWorker) Start() {
 				scripts.MeetRequirement(work.ScriptName, work.TrialID, work.ExperimentID, work.Level)
 			}
 			// Increment counter for trials completed for the given script
-			counterId := scripts.GetCounterID(work.ExperimentID, work.ScriptName, work.ContainerName, work.HostID, work.CollectorName)
+			counterId := scripts.GetCounterID(work.ExperimentID, work.ScriptName, work.ContainerName, work.HostID)
 			TrialCount.SetIfAbsent(counterId, 0)
 			i, ok := TrialCount.Get(counterId)
 			if ok {

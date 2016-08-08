@@ -44,7 +44,7 @@ func submitWorksThatMeetReqs(request WorkRequest, r string, analyserScripts []An
 // Submit the work when trial counter of a script matches the total num of trials for an experiment
 func submitWorksThatMeetTrialCount(request WorkRequest, r string, analyserScripts []AnalyserScript) {
 	for _, sc := range analyserScripts {
-		counterId := scripts.GetCounterID(request.ExperimentID, sc.ScriptName, request.ContainerName, request.HostID, request.CollectorName)
+		counterId := scripts.GetCounterID(request.ExperimentID, sc.ScriptName, request.ContainerName, request.HostID)
 		i, ok := TrialCount.Get(counterId)
 		if ok && i.(int) == request.TotalTrialsNum {
 			TrialCount.Remove(counterId)
