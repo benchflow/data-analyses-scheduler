@@ -110,7 +110,7 @@ RUN apk upgrade --update && \
 
 # adds Alpine's testing repository and install scripts dependencies (py-numpy, py-yaml)
 RUN sed -i -e '$a@testing http://dl-4.alpinelinux.org/alpine/edge/testing' /etc/apk/repositories \    
-    && apk --update add py-numpy@testing py-scipy@testing py-yaml py-dateutil
+    && apk --update add py-yaml py-dateutil
 
 # adds pip and install scripts dependencies (future)
 RUN apk --update add py-pip \
