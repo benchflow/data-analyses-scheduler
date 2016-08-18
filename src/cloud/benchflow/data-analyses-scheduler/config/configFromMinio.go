@@ -42,9 +42,13 @@ func TakeTestConfigFromMinio(experimentID string) (int, string, string, string, 
 	}
 	
 	// Path of the file
+	experimentIDMinioFormat := strings.Replace(experimentID, ".", "/", -1)
+	// String to be hashed to the the hash in which the configuration i stored
+	// This is: the experimentID but the last part of the same (.N), here converted to /N, that represent the experiment number
 	lastDotIndex := strings.LastIndex(experimentID, ".")
-	hash := hashKey(experimentID[:lastDotIndex])
-	path := hash+"/"+(strings.Replace(experimentID, ".", "/", -1))
+	minioHash := experimentIDMinioFormat[:lastDotIndex]
+	hash := hashKey(minioHash)
+	path := hash+"/"+experimentIDMinioFormat
 	
 	// Get object info
 	objInfo, err := minioClient.StatObject(TestsConfigBucket, path+"/"+TestsConfigName)
