@@ -43,12 +43,14 @@ func SubmitScript(args []string, script string) bool {
 		err := cmd.Start()
 		cmd.Wait()
 		if err != nil {
-			panic(err)
+			fmt.Println("Script "+script+" exited with a fatal error")
+			fmt.Println(err)
+			return false
 			}
 		errLog := errOutput.String()
 		fmt.Println(errLog)
 		if checkForErrors(errLog) {
-			fmt.Println("Script " + script + " failed")
+			fmt.Println("Script " + script + " exited with an error")
 			fmt.Println(errLog)
 			continue
 		}

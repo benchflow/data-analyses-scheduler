@@ -19,7 +19,7 @@ func StartTransformerDispatcher(nworkers int) {
   
   // Starts the workers
   for i := 0; i<nworkers; i++ {
-    fmt.Println("Starting worker", i+1)
+    fmt.Println("Starting transformer worker", i+1)
     worker := workers.NewTransformerWorker(i+1, TransformerWorkerQueue)
     worker.Start()
   }
@@ -30,11 +30,11 @@ func StartTransformerDispatcher(nworkers int) {
     for {
       select {
       case work := <-TransformerWorkQueue:
-        fmt.Println("Received work requeust")
+        fmt.Println("Received work request for script "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
         go func() {
           worker := <-TransformerWorkerQueue
           
-          fmt.Println("Dispatching work request")
+          fmt.Println("Dispatching work request for script "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
           worker <- work
         }()
       }

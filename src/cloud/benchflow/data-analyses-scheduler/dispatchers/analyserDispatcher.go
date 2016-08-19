@@ -18,7 +18,7 @@ func StartAnalyserDispatcher(nworkers int) {
   
   // Starts the workers
   for i := 0; i<nworkers; i++ {
-    fmt.Println("Starting worker", i+1)
+    fmt.Println("Starting analyser worker", i+1)
     worker := workers.NewAnalyserWorker(i+1, AnalyserWorkerQueue)
     worker.Start()
   }
@@ -29,11 +29,11 @@ func StartAnalyserDispatcher(nworkers int) {
     for {
       select {
       case work := <-AnalyserWorkQueue:
-        fmt.Println("Received work requeust")
+        fmt.Println("Received work request for script "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
         go func() {
           worker := <-AnalyserWorkerQueue
           
-          fmt.Println("Dispatching work request")
+          fmt.Println("Dispatching work request for script "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
           worker <- work
         }()
       }
