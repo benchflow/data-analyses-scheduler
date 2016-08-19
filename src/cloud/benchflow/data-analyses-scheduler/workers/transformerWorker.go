@@ -36,8 +36,10 @@ func (w *TransformerWorker) Start() {
     	// Takes work from its own queue
         case work := <-w.Work:
           // Submits script to Spark
+          fmt.Println("Transformer worker submitting script: ", work.SparkArgs)
           success := scripts.SubmitScript(work.SparkArgs, work.Script)
           if success {
+          	  fmt.Println("Transformer script completed successfully: "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
 			  scripts.MeetRequirement(work.Topic, work.TrialID, work.ExperimentID, "trial")
 			  AnalyserDispatchRequestsQueue <- work
 		  }
