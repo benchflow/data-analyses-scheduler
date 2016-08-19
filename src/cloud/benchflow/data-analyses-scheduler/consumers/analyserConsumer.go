@@ -35,8 +35,9 @@ func submitWorksThatMeetReqs(request WorkRequest, r string, analyserScripts []An
 		fmt.Println("All requirements met for: "+r)
 		for _, sc := range analyserScripts {
 			args := scripts.ConstructAnalyserSubmitArguments(sc.ScriptName, sc.TrialScript, request.TrialID, request.ExperimentID, request.SUTName, request.SUTVersion, request.ContainerID, request.ContainerName, request.HostID)
-			dispatchers.AnalyserWorkQueue <- WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.TrialScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, ContainerName: request.ContainerName, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "trial"}
-  			fmt.Println("Analyser work request queued")
+			work := WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.TrialScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, ContainerName: request.ContainerName, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "trial"}
+			dispatchers.AnalyserWorkQueue <- work
+  			fmt.Println("Analyser work request queued for script that meets requirements "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
 		}
 	}
 }
@@ -50,8 +51,9 @@ func submitWorksThatMeetTrialCount(request WorkRequest, r string, analyserScript
 			TrialCount.Remove(counterId)
 			fmt.Printf("All trials "+sc.TrialScript+" for experiment "+request.ExperimentID+" completed")
 			args := scripts.ConstructAnalyserSubmitArguments(sc.ScriptName, sc.ExperimentScript, request.TrialID, request.ExperimentID, request.SUTName, request.SUTVersion, request.ContainerID, request.ContainerName, request.HostID)
-			dispatchers.AnalyserWorkQueue <- WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.ExperimentScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, ContainerName: request.ContainerName, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "experiment"}
-  			fmt.Println("Analyser work request queued")
+			work := WorkRequest{SparkArgs: args, ScriptName: sc.ScriptName, Script: sc.ExperimentScript, Topic: request.Topic, TrialID: request.TrialID, ExperimentID: request.ExperimentID, ContainerID: request.ContainerID, ContainerName: request.ContainerName, HostID: request.HostID, SUTName: request.SUTName, SUTVersion: request.SUTVersion, TotalTrialsNum: request.TotalTrialsNum, CollectorName: request.CollectorName, Level: "experiment"}
+			dispatchers.AnalyserWorkQueue <- work
+  			fmt.Println("Analyser work request queued for experiment script "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
 		}
 	}
 }

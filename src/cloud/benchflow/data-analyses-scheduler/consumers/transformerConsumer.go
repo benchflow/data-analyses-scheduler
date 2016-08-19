@@ -70,8 +70,9 @@ func StartDataTransformerConsumer(t TransformerSetting) {
 					containerName := containerNames[i]
 					hostID := msg.Host_id
 					args := scripts.ConstructTransformerSubmitArguments(s, msg, containerID, hostID, SUTName, SUTVersion, SUTType)
-					dispatchers.TransformerWorkQueue <- WorkRequest{SparkArgs: args, Script: s.Script, ScriptName: t.Topic, Topic: t.Topic, TrialID: msg.Trial_id, ExperimentID: msg.Experiment_id, ContainerID: containerID, ContainerName: containerName, HostID: msg.Host_id, SUTName: SUTName, SUTVersion: SUTVersion, TotalTrialsNum: numOfTrials, CollectorName: msg.Collector_name, Level: "trial"}
-  					fmt.Println("Transformer work request queued")
+					work := WorkRequest{SparkArgs: args, Script: s.Script, ScriptName: t.Topic, Topic: t.Topic, TrialID: msg.Trial_id, ExperimentID: msg.Experiment_id, ContainerID: containerID, ContainerName: containerName, HostID: msg.Host_id, SUTName: SUTName, SUTVersion: SUTVersion, TotalTrialsNum: numOfTrials, CollectorName: msg.Collector_name, Level: "trial"}
+					dispatchers.TransformerWorkQueue <- work
+  					fmt.Println("Transformer work request queued for script "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
 					}
 				}
 			consumer.CommitUpto(m)

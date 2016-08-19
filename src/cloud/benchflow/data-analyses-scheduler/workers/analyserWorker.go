@@ -36,8 +36,10 @@ func (w *AnalyserWorker) Start() {
     	// Get work from the worker's work queue
         case work := <-w.Work:
         	// Submit script to Spark
+        	fmt.Println("Analyser worker submitting script: ", work.SparkArgs)
 			success := scripts.SubmitScript(work.SparkArgs, work.Script)
 			if success {
+				fmt.Println("Analyser script completed successfully: "+work.ScriptName+", "+work.SUTName+", "+work.SUTVersion+", "+work.TrialID+", "+work.ContainerID+", "+work.HostID+", "+work.Level)
 				scripts.MeetRequirement(work.ScriptName, work.TrialID, work.ExperimentID, work.Level)
 			}
 			// Increment counter for trials completed for the given script
