@@ -11,6 +11,8 @@ import (
 func getConfigFilePath(SUTVersion string, SUTName string, SUTType string, fileName string) string {
 	// Split the version into 3 numbers (eg. 1.0.2 -> [1 0 2])
 	versionNums := strings.Split(SUTVersion, ".")
+	SUTName = strings.ToLower(SUTName)
+	SUTType = strings.ToLower(SUTType)
 	dirs, _ := ioutil.ReadDir(AppPath+"/"+TransformersConfigurationsPath+"/"+SUTType+"/"+SUTName)
 	// Iterate over the dirs, finds the one for the version passed to the function, either a perfect match or matching a range (eg. 1.2.0-1.4.0 for 1.3.0)
     for _, dir := range dirs {
