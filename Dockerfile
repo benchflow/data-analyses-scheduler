@@ -25,7 +25,7 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 
 # TODO: remove python, when Spark will be used outside of the container
 # TODO: Improve the following code to download only once from github and keep all the wanted files in the right directories
-RUN apk --update add curl tar python && \
+RUN apk --update add curl wget tar python && \
 	# Get data-analyses-scheduler
     wget -q --no-check-certificate -O /app/data-analyses-scheduler https://github.com/benchflow/data-analyses-scheduler/releases/download/$DATA_ANALYSES_SCHEDULER_VERSION/data-analyses-scheduler && \
     chmod +x /app/data-analyses-scheduler && \
@@ -39,31 +39,31 @@ RUN apk --update add curl tar python && \
     ln -s /usr/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION /usr/spark && \
     mkdir -p /app/configuration && \
     mkdir -p /app/data-transformers && \
-    wget -q -O - https://github.com/benchflow/data-transformers/archive/$DATA_TRANSFORMERS_VERSION.tar.gz \
+    wget -q --no-check-certificate -O - https://github.com/benchflow/data-transformers/archive/$DATA_TRANSFORMERS_VERSION.tar.gz \
     | tar xz --strip-components=2 -C /app/data-transformers data-transformers-$DATA_TRANSFORMERS_VERSION/data-transformers && \
     # Get data-transformers scheduler configuration file
-    wget -q -O - https://github.com/benchflow/data-transformers/archive/$DATA_TRANSFORMERS_VERSION.tar.gz \
+    wget -q --no-check-certificate -O - https://github.com/benchflow/data-transformers/archive/$DATA_TRANSFORMERS_VERSION.tar.gz \
     | tar xz --strip-components=1 --wildcards --no-anchored '*.scheduler.configuration.yml' && \
     for f in *.scheduler.configuration.yml; do mv -i "$f" "app/configuration/$f"; done  && \
     # Get analysers
     mkdir -p /app/analysers && \
-    wget -q -O - https://github.com/benchflow/analysers/archive/$ANALYSERS_VERSION.tar.gz \
+    wget -q --no-check-certificate -O - https://github.com/benchflow/analysers/archive/$ANALYSERS_VERSION.tar.gz \
     | tar xz --strip-components=2 -C /app/analysers analysers-$ANALYSERS_VERSION/analysers && \
     # Get analyser scheduler configuration file
-    wget -q -O - https://github.com/benchflow/analysers/archive/$ANALYSERS_VERSION.tar.gz \
+    wget -q --no-check-certificate -O - https://github.com/benchflow/analysers/archive/$ANALYSERS_VERSION.tar.gz \
     | tar xz --strip-components=1 --wildcards --no-anchored '*.scheduler.configuration.yml' && \
     for f in *.scheduler.configuration.yml; do mv -i "$f" "app/configuration/$f"; done  && \
     # Get plugins (configuration files) TODO: do not let the following code fails if nothing is found in the .tar.gunzip
     mkdir -p /app/data-transformers/suts && \
-    wget -q -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
+    wget -q --no-check-certificate -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
     | tar xz --strip-components=1 -C /app/data-transformers/suts --wildcards --no-anchored 'data-transformers.configuration.yml' && \
     # TODO: currenlty skipping analysers configuration because we don't have any
     # && \
     # mkdir -p /app/analysers/suts && \
-    # wget -q -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
+    # wget -q --no-check-certificate -O - https://github.com/benchflow/sut-plugins/archive/$PLUGINS_VERSION.tar.gz \
     # | tar xz --strip-components=1 -C /app/analysers/suts --wildcards --no-anchored 'analysers.configuration.yml'
     # Clean up
-    apk del --purge curl tar && \
+    apk del --purge curl wget tar && \
     rm -rf /var/cache/apk/*
 
 COPY ./configuration.yml /app/configuration.yml
