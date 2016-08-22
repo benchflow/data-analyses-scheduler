@@ -28,7 +28,7 @@ RUN apk --update add curl wget tar python && \
 	# Add Spark
     curl \
 	--location \
-	--retry 3 \
+	--retry 10 \
 	http://d3kbcqa49mib13.cloudfront.net/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz \
 	| gunzip \
 	| tar x -C /usr/ && \
