@@ -73,5 +73,12 @@ func checkForErrors(errLog string) bool {
 	if strings.Contains(errString, "exception") {
 		return true
 		}
+	if strings.Contains(errString, "errno") {
+		return true
+		}
+	//TODO: Use a better way to recognise errors
+	if strings.Contains(errString, "traceback") {
+		return true
+		}
 	return false
 	}
