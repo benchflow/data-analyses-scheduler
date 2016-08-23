@@ -48,28 +48,35 @@ func SubmitScript(args []string, script string) bool {
 			fmt.Println(stderr.String())
 			return false
 		}
-		fmt.Println(out.String())
+		
 		if checkForErrors(stderr.String()) {
 			fmt.Println("Script " + script + " exited with an error")
+			fmt.Println(stderr.String())
 			continue
 		}
+		
 		if checkForErrors(out.String()) {
 			fmt.Println("Script " + script + " exited with an error")
+			fmt.Println(out.String())
 			continue
 		}
+		
 		fmt.Println("Script "+script+" processed")
 		break
 	}
+	
 	if retries == 3 {
 		fmt.Println("Max number of retries reached for " + script)
 		return false
 	}
+	
 	return true
-	}
+}
 
 // Checks if the output log for spark-submit contains errors
 func checkForErrors(errLog string) bool {
 	errString := strings.ToLower(errLog)
+	//TODO: Use a better way to recognise errors
 	if strings.Contains(errString, "error") {
 		return true
 	}
@@ -79,7 +86,6 @@ func checkForErrors(errLog string) bool {
 	if strings.Contains(errString, "errno") {
 		return true
 	}
-	//TODO: Use a better way to recognise errors
 	if strings.Contains(errString, "traceback") {
 		return true
 	}
