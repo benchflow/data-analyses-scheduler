@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"os"
 	"strings"
-	"bytes"
+	//"bytes"
 	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
@@ -37,21 +37,15 @@ func SubmitScript(args []string, script string) bool {
 	cmd.Env = env
 	for retries < 3 {
 		retries += 1
-		cmd.Stdout = os.Stdout
-		errOutput := &bytes.Buffer{}
-		cmd.Stderr = errOutput
-		err := cmd.Start()
-		cmd.Wait()
+		out, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Println("Script "+script+" exited with a fatal error")
 			fmt.Println(err)
 			return false
-			}
-		errLog := errOutput.String()
-		fmt.Println(errLog)
-		if checkForErrors(errLog) {
+		}
+		fmt.Println(out)
+		if checkForErrors(string(out)) {
 			fmt.Println("Script " + script + " exited with an error")
-			fmt.Println(errLog)
 			continue
 		}
 		fmt.Println("Script "+script+" processed")
@@ -60,7 +54,7 @@ func SubmitScript(args []string, script string) bool {
 	if retries == 3 {
 		fmt.Println("Max number of retries reached for " + script)
 		return false
-		}
+	}
 	return true
 	}
 
@@ -69,16 +63,16 @@ func checkForErrors(errLog string) bool {
 	errString := strings.ToLower(errLog)
 	if strings.Contains(errString, "error") {
 		return true
-		}
+	}
 	if strings.Contains(errString, "exception") {
 		return true
-		}
+	}
 	if strings.Contains(errString, "errno") {
 		return true
-		}
+	}
 	//TODO: Use a better way to recognise errors
 	if strings.Contains(errString, "traceback") {
 		return true
-		}
-	return false
 	}
+	return false
+}
