@@ -40,6 +40,7 @@ func SubmitScript(args []string, script string) bool {
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Println("Script "+script+" exited with a fatal error")
+			fmt.Println(out)
 			fmt.Println(err)
 			return false
 		}
