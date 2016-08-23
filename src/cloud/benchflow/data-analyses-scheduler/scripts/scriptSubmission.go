@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"os"
 	"strings"
-	//"bytes"
+	"bytes"
 	. "cloud/benchflow/data-analyses-scheduler/vars"
 )
 
@@ -37,15 +37,23 @@ func SubmitScript(args []string, script string) bool {
 	cmd.Env = env
 	for retries < 3 {
 		retries += 1
-		out, err := cmd.CombinedOutput()
+		var out bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &stderr
+		err := cmd.Run()
 		if err != nil {
 			fmt.Println("Script "+script+" exited with a fatal error")
-			fmt.Println(out)
-			fmt.Println(err)
+			fmt.Println(out.String())
+			fmt.Println(stderr.String())
 			return false
 		}
-		fmt.Println(out)
-		if checkForErrors(string(out)) {
+		fmt.Println(out.String())
+		if checkForErrors(stderr.String()) {
+			fmt.Println("Script " + script + " exited with an error")
+			continue
+		}
+		if checkForErrors(out.String()) {
 			fmt.Println("Script " + script + " exited with an error")
 			continue
 		}
