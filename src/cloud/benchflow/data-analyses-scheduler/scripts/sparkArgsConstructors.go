@@ -48,7 +48,7 @@ func constructSparkArguments() []string {
 }
 
 // Function that constructs and returns the arguments for a spark-submit command for a transformer script
-func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, hostID string, SUTName string, SUTVersion string, SUTType string) []string {
+func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, containerID string, containerName string, hostID string, SUTName string, SUTVersion string, SUTType string) []string {
 	var args []string
 	args = constructSparkArguments()
 	args = append(args, "--py-files", AppPath+"/"+TransformersPath+"/commons/commons.py"+","+AppPath+"/"+TransformersPath+"/transformations/dataTransformations.py"+","+SparkHome+"/pyspark-cassandra-assembly-"+PysparkCassandraVersion+".jar")
@@ -60,6 +60,7 @@ func ConstructTransformerSubmitArguments(s TransformerScript, msg KafkaMessage, 
 	transformerArguments := TransformerArguments{}
 	transformerArguments.Cassandra_keyspace = CassandraKeyspace
 	transformerArguments.Container_ID = msg.Container_id
+	transformerArguments.Container_name = msg.Container_name
 	transformerArguments.Experiment_ID = msg.Experiment_id
 	transformerArguments.File_bucket = RunsBucket
 	transformerArguments.File_path = msg.Minio_key
