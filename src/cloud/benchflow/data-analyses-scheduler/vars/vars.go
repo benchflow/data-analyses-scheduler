@@ -119,6 +119,7 @@ type TransformerArguments struct {
     Experiment_ID string `json:"experiment_id"`
     Config_file string `json:"config_file"`
     Container_ID string `json:"container_id"`
+    Container_name string `json:"container_name"`
     Host_ID string `json:"host_id"`
 	}
 
